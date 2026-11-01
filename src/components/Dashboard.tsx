@@ -222,11 +222,7 @@ function LiveDashboard() {
 
       {activeRoute && (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-muted">
-              Right now on {activeRoute.name}
-              {reversed ? ', reversed' : ''}
-            </p>
+          <div className="flex flex-wrap items-center justify-end gap-3">
             <div className="flex flex-wrap items-center gap-3 text-sm">
               {confirmingDeleteId === activeRoute.id && !showingAllRoutes ? (
                 <>
@@ -248,7 +244,7 @@ function LiveDashboard() {
                 aria-pressed={reversed}
                 className="cursor-pointer rounded-md border border-line bg-surface px-3 py-1 font-semibold hover:border-bike"
               >
-                Reverse direction
+                {reversed ? 'Original direction' : 'Reverse direction'}
               </button>
             </div>
           </div>
