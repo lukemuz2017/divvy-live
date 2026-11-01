@@ -11,6 +11,7 @@ import {
   MAX_WALK_MILES,
   rankDropoffs,
   rankPickups,
+  sharedStationIds,
   stationsInRange,
 } from '@/lib/scoring';
 import { FreshnessBadge, FreshnessBanner, timeAgo } from './FreshnessBadge';
@@ -122,6 +123,8 @@ function LiveDashboard() {
   const pointDropoffs = to ? rankDropoffs(nearby.stations, nearby.statuses, to) : [];
   const walkPickups = from ? closestPickups(nearby.stations, nearby.statuses, from) : [];
   const walkDropoffs = to ? closestDropoffs(nearby.stations, nearby.statuses, to) : [];
+  const pickupsInBoth = sharedStationIds(pointPickups, walkPickups);
+  const dropoffsInBoth = sharedStationIds(pointDropoffs, walkDropoffs);
   const stationsNearFrom = from ? stationsInRange(nearby.stations, from).length : 0;
   const stationsNearTo = to ? stationsInRange(nearby.stations, to).length : 0;
   const tripsMatch =
@@ -257,6 +260,15 @@ function LiveDashboard() {
             </section>
           ) : showOptions ? (
             <>
+              {(pickupsInBoth.size > 0 || dropoffsInBoth.size > 0) && (
+                <p className="text-sm text-muted">
+                  <span className="mr-2 inline-block rounded-full bg-bike-soft px-2 py-0.5 font-mono text-xs font-medium text-bike">
+                    Best of both
+                  </span>
+                  In the top three for both walking distance and points.
+                </p>
+              )}
+
               <div className="grid gap-8 md:grid-cols-2 md:gap-6">
                 <TripPlan
                   title="Shortest walk"
@@ -264,6 +276,8 @@ function LiveDashboard() {
                   measure="miles"
                   pickups={walkPickups}
                   dropoffs={walkDropoffs}
+                  pickupsInBoth={pickupsInBoth}
+                  dropoffsInBoth={dropoffsInBoth}
                   changeCounts={nearby.changeCounts}
                   pickupEmptyMessage={pickupEmptyMessage}
                   dropoffEmptyMessage={dropoffEmptyMessage}
@@ -274,6 +288,8 @@ function LiveDashboard() {
                   measure="points"
                   pickups={pointPickups}
                   dropoffs={pointDropoffs}
+                  pickupsInBoth={pickupsInBoth}
+                  dropoffsInBoth={dropoffsInBoth}
                   changeCounts={nearby.changeCounts}
                   note={tripsMatch ? 'This is the same trip as the shortest walk right now.' : undefined}
                   pickupEmptyMessage={pickupEmptyMessage}

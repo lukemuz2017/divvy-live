@@ -4,7 +4,7 @@ import { useAuth } from '@clerk/nextjs';
 import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { boundsAround, stationsInRange } from './scoring.ts';
+import { boundsAround, isCompleteRun, isCompleteStatus, stationsInRange } from './scoring.ts';
 import type { Point, Station, StationStatus, WorkerRun } from './scoring.ts';
 
 // Realtime filters accept up to 100 values, so each end of a route watches its 50 nearest stations.
@@ -88,7 +88,8 @@ export function useLatestRun(supabase: SupabaseClient) {
     const channel = supabase
       .channel('worker-runs')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'worker_runs' }, (payload) => {
-        setRun(payload.new as WorkerRun);
+        if (isCompleteRun(payload.new)) setRun(payload.new);
+        else void load();
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') void load();
@@ -181,7 +182,11 @@ export function useNearbyStations(supabase: SupabaseClient, route: Route | null)
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'station_status', filter: `station_id=in.(${ids.join(',')})` },
           (payload) => {
-            const row = payload.new as StationStatus;
+            const row = payload.new;
+            if (!isCompleteStatus(row)) {
+              void loadStatuses();
+              return;
+            }
             setStatuses((previous) => new Map(previous).set(row.station_id, row));
             setChangeCounts((previous) => new Map(previous).set(row.station_id, (previous.get(row.station_id) ?? 0) + 1));
             setLastChange({ stationId: row.station_id, at: Date.now() });

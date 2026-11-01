@@ -143,6 +143,29 @@ export function closestDropoffs(stations: Station[], statuses: Map<string, Stati
   return shortestWalk(dropoffOptions(stations, statuses, point));
 }
 
+// Stations in both top threes, which the page calls out as the best of both.
+export function sharedStationIds(a: Recommendation[], b: Recommendation[]): Set<string> {
+  const inB = new Set(b.map((option) => option.station.station_id));
+  return new Set(a.map((option) => option.station.station_id).filter((id) => inB.has(id)));
+}
+
+// Realtime can deliver a change with its fields missing. Trusting one would show a false outage,
+// because a run with no ok field reads as a failed run, so these decide when to reload instead.
+export function isCompleteRun(row: Partial<WorkerRun> | null | undefined): row is WorkerRun {
+  return typeof row?.ok === 'boolean' && typeof row?.ran_at === 'string';
+}
+
+export function isCompleteStatus(row: Partial<StationStatus> | null | undefined): row is StationStatus {
+  return (
+    typeof row?.station_id === 'string' &&
+    typeof row?.bikes === 'number' &&
+    typeof row?.ebikes === 'number' &&
+    typeof row?.docks === 'number' &&
+    typeof row?.is_renting === 'boolean' &&
+    typeof row?.is_returning === 'boolean'
+  );
+}
+
 // Uses the browser's clock, because a stopped worker sends nothing that could announce it has stopped.
 export function freshnessOf(run: WorkerRun | null, loaded: boolean, nowMs: number): Freshness {
   if (!loaded) return 'loading';

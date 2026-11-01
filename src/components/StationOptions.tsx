@@ -19,11 +19,13 @@ function StationOption({
   rank,
   measure,
   changes,
+  bestOfBoth,
 }: {
   option: Recommendation;
   rank: number;
   measure: Measure;
   changes: number;
+  bestOfBoth: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const detailsId = useId();
@@ -31,7 +33,7 @@ function StationOption({
   const miles = formatMiles(option.miles);
 
   return (
-    <li className="overflow-hidden rounded-lg border border-line bg-surface">
+    <li className={`overflow-hidden rounded-lg border bg-surface ${bestOfBoth ? 'border-bike' : 'border-line'}`}>
       {/* A new key replays the flash each time Realtime delivers a change, while the open state above it survives. */}
       <div key={changes} className={changes > 0 ? 'station-changed' : ''}>
         <button
@@ -43,6 +45,11 @@ function StationOption({
           <span className="min-w-0 font-semibold">
             <span className="mr-2 font-mono text-sm font-normal text-muted">{rank}</span>
             {option.station.name}
+            {bestOfBoth && (
+              <span className="ml-2 inline-block rounded-full bg-bike-soft px-2 py-0.5 align-middle font-mono text-xs font-medium text-bike">
+                Best of both
+              </span>
+            )}
           </span>
           <span className="flex shrink-0 items-center gap-2">
             <span className={`font-mono font-medium ${measure === 'points' ? 'text-bike' : ''}`}>
@@ -78,12 +85,14 @@ export function StationOptions({
   title,
   options,
   measure,
+  bestOfBoth,
   changeCounts,
   emptyMessage,
 }: {
   title: string;
   options: Recommendation[];
   measure: Measure;
+  bestOfBoth: Set<string>;
   changeCounts: Map<string, number>;
   emptyMessage: string;
 }) {
@@ -101,6 +110,7 @@ export function StationOptions({
               rank={index + 1}
               measure={measure}
               changes={changeCounts.get(option.station.station_id) ?? 0}
+              bestOfBoth={bestOfBoth.has(option.station.station_id)}
             />
           ))}
         </ol>

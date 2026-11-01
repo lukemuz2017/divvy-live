@@ -9,6 +9,8 @@ export function TripPlan({
   measure,
   pickups,
   dropoffs,
+  pickupsInBoth,
+  dropoffsInBoth,
   changeCounts,
   note,
   pickupEmptyMessage,
@@ -19,6 +21,8 @@ export function TripPlan({
   measure: Measure;
   pickups: Recommendation[];
   dropoffs: Recommendation[];
+  pickupsInBoth: Set<string>;
+  dropoffsInBoth: Set<string>;
   changeCounts: Map<string, number>;
   note?: string;
   pickupEmptyMessage: string;
@@ -70,8 +74,22 @@ export function TripPlan({
         )}
       </div>
 
-      <StationOptions title="Pick up" options={pickups} measure={measure} changeCounts={changeCounts} emptyMessage={pickupEmptyMessage} />
-      <StationOptions title="Drop off" options={dropoffs} measure={measure} changeCounts={changeCounts} emptyMessage={dropoffEmptyMessage} />
+      <StationOptions
+        title="Pick up"
+        options={pickups}
+        measure={measure}
+        bestOfBoth={pickupsInBoth}
+        changeCounts={changeCounts}
+        emptyMessage={pickupEmptyMessage}
+      />
+      <StationOptions
+        title="Drop off"
+        options={dropoffs}
+        measure={measure}
+        bestOfBoth={dropoffsInBoth}
+        changeCounts={changeCounts}
+        emptyMessage={dropoffEmptyMessage}
+      />
     </section>
   );
 }

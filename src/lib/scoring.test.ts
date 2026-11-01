@@ -8,10 +8,13 @@ import {
   dropoffPoints,
   formatMiles,
   freshnessOf,
+  isCompleteRun,
+  isCompleteStatus,
   milesBetween,
   pickupPoints,
   rankDropoffs,
   rankPickups,
+  sharedStationIds,
   STALE_AFTER_MS,
 } from './scoring.ts';
 import type { Station, StationStatus, WorkerRun } from './scoring.ts';
@@ -117,6 +120,25 @@ test('distances read in tenths of a mile, and never as zero', () => {
   assert.equal(formatMiles(0.42), '0.4 mi');
   assert.equal(formatMiles(0.01), '0.1 mi');
   assert.equal(formatMiles(1.26), '1.3 mi');
+});
+
+test('best of both finds stations in both top threes', () => {
+  const stations = [station('close-and-full', 0.001), station('close-only', 0.002), station('full-only', 0.005)];
+  const statuses = statusMap(status('close-and-full', 9, 1), status('close-only', 1, 9), status('full-only', 10, 0));
+  const shared = sharedStationIds(rankPickups(stations.slice(0, 1).concat(stations[2]), statuses, home), closestPickups(stations.slice(0, 2), statuses, home));
+
+  assert.deepEqual([...shared], ['close-and-full']);
+});
+
+test('a Realtime message with missing fields is not trusted', () => {
+  assert.equal(isCompleteRun({}), false, 'an empty run must not read as a failed run');
+  assert.equal(isCompleteRun({ ok: true }), false);
+  assert.equal(isCompleteRun(run(1000)), true);
+  assert.equal(isCompleteRun(run(1000, false)), true, 'a real failed run is still believed');
+
+  assert.equal(isCompleteStatus({}), false);
+  assert.equal(isCompleteStatus({ station_id: 'a', bikes: 1 }), false);
+  assert.equal(isCompleteStatus(status('a', 1, 1)), true);
 });
 
 test('only the top three options are shown', () => {
