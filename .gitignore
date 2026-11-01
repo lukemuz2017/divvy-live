@@ -1,0 +1,20 @@
+# Dependencies and build output
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Secrets: never commit these
+.env
+.env.*
+!.env.example
+
+# Local tool state
+.vercel/
+.clerk/
+supabase/.temp/
+.claude/settings.local.json
+
+# Course materials
+*.pdf

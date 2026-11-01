@@ -1,0 +1,204 @@
+<title>Divvy Commute Data Flow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+/* Layout: one wide system chart first, then the handoffs and the measured feed facts as reference tables. */
+:root {
+  --bg: #f3f7f9; --surface: #ffffff; --fg: #15242c; --muted: #52646e; --line: #c6d3da;
+  --live: #0b6fa4; --flag: #c8102e;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", Arial, sans-serif;
+  --mono: "IBM Plex Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #101a20; --surface: #18252c; --fg: #e8f0f4; --muted: #9db0ba; --line: #36474f; --live: #6cc7ef; --flag: #ff7b8c; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #101a20; --surface: #18252c; --fg: #e8f0f4; --muted: #9db0ba; --line: #36474f; --live: #6cc7ef; --flag: #ff7b8c; color-scheme: dark; }
+
+body { background: var(--bg); color: var(--fg); font: 400 17px/1.5 var(--body); }
+main { max-width: 1120px; margin: 0 auto; padding-block: 40px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 40px; }
+main > * { min-width: 0; }
+h1, h2 { font-family: var(--display); font-weight: 700; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.1; letter-spacing: -0.01em; }
+h2 { font-size: 23px; margin-bottom: 12px; }
+p { margin: 0; max-width: 68ch; }
+header { display: grid; gap: 12px; }
+header p { color: var(--muted); font-size: 19px; }
+code { font: 400 0.88em var(--mono); overflow-wrap: anywhere; }
+
+figure { margin: 0; display: grid; gap: 12px; }
+.scroll { overflow-x: auto; }
+figure svg { display: block; width: 100%; min-width: 900px; height: auto; color: var(--fg); }
+figcaption { color: var(--muted); max-width: 68ch; }
+.box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+.box-live { stroke: var(--live); stroke-width: 2; }
+.name { font: 700 15px var(--display); fill: currentColor; }
+.detail { font: 400 12px var(--mono); fill: var(--muted); }
+.flow { font: 500 12px var(--body); fill: currentColor; }
+.live { stroke: var(--live); stroke-width: 2.5; fill: none; }
+.setup { stroke: var(--muted); stroke-width: 1.75; stroke-dasharray: 6 5; fill: none; }
+.head-live { fill: var(--live); }
+.head-setup { fill: var(--muted); }
+
+table { border-collapse: collapse; width: 100%; min-width: 720px; background: var(--surface); }
+th, td { text-align: left; vertical-align: top; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+th { font: 500 12px var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+td:first-child { font-weight: 600; white-space: nowrap; }
+.num { font-variant-numeric: tabular-nums; }
+.intro { margin-bottom: 14px; }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; }
+.rules > div { min-width: 0; }
+.rules h3 { font: 700 16px var(--display); margin: 0 0 4px; }
+.rules p { color: var(--muted); }
+a:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
+</style>
+
+<main>
+  <header>
+    <h1>Divvy commute: how the data moves</h1>
+    <p>Each person saves a home and a work address. The app recommends where to pick up and drop off a bike, favoring full pick-up stations and empty drop-off stations. Planned before any code was written.</p>
+  </header>
+
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1140 600" role="img" aria-label="Divvy station data flows every minute from the Divvy feeds to a Supabase Edge Function, which saves only changed rows to the database. Realtime pushes those changes to the page on Vercel. Separately, a person's addresses go from the page through a server route to the Census geocoder, and rounded coordinates are saved to the database.">
+        <defs>
+          <marker id="arrow-live" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head-live" d="M0 0 L10 5 L0 10 Z"/></marker>
+          <marker id="arrow-setup" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="head-setup" d="M0 0 L10 5 L0 10 Z"/></marker>
+        </defs>
+
+        <!-- Live path boxes -->
+        <rect class="box box-live" x="10" y="70" width="150" height="130" rx="4"/>
+        <text class="name" x="22" y="98">Divvy feeds</text>
+        <text class="detail" x="22" y="124">station_status</text>
+        <text class="detail" x="22" y="142">station_information</text>
+
+        <rect class="box box-live" x="252" y="70" width="150" height="130" rx="4"/>
+        <text class="name" x="264" y="98">Worker</text>
+        <text class="detail" x="264" y="124">Edge Function</text>
+        <text class="detail" x="264" y="142">run by Supabase Cron</text>
+        <text class="detail" x="264" y="160">compares counts</text>
+
+        <rect class="box box-live" x="494" y="70" width="150" height="130" rx="4"/>
+        <text class="name" x="506" y="98">Database</text>
+        <text class="detail" x="506" y="122">stations</text>
+        <text class="detail" x="506" y="140">station_status</text>
+        <text class="detail" x="506" y="158">worker_runs</text>
+        <text class="detail" x="506" y="176">commutes (private)</text>
+
+        <rect class="box box-live" x="736" y="70" width="150" height="130" rx="4"/>
+        <text class="name" x="748" y="98">Realtime</text>
+        <text class="detail" x="748" y="124">sends each page only</text>
+        <text class="detail" x="748" y="142">its nearby stations</text>
+        <text class="detail" x="748" y="160">and new run rows</text>
+
+        <rect class="box box-live" x="978" y="70" width="150" height="130" rx="4"/>
+        <text class="name" x="990" y="98">Page on Vercel</text>
+        <text class="detail" x="990" y="124">scores stations</text>
+        <text class="detail" x="990" y="142">ranks top three</text>
+        <text class="detail" x="990" y="160">checks freshness</text>
+
+        <!-- Live path arrows -->
+        <line class="live" x1="160" y1="135" x2="250" y2="135" marker-end="url(#arrow-live)"/>
+        <text class="flow" x="206" y="107" text-anchor="middle">JSON,</text>
+        <text class="flow" x="206" y="123" text-anchor="middle">every 60s</text>
+
+        <line class="live" x1="402" y1="135" x2="492" y2="135" marker-end="url(#arrow-live)"/>
+        <text class="flow" x="448" y="107" text-anchor="middle">changed rows,</text>
+        <text class="flow" x="448" y="123" text-anchor="middle">1 run row</text>
+
+        <line class="live" x1="644" y1="135" x2="734" y2="135" marker-end="url(#arrow-live)"/>
+        <text class="flow" x="690" y="123" text-anchor="middle">row changes</text>
+
+        <line class="live" x1="886" y1="135" x2="976" y2="135" marker-end="url(#arrow-live)"/>
+        <text class="flow" x="932" y="123" text-anchor="middle">push</text>
+
+        <path class="live" d="M569 70 V34 H1053 V68" marker-end="url(#arrow-live)"/>
+        <text class="flow" x="811" y="24" text-anchor="middle">first load: current rows for nearby stations, latest run</text>
+
+        <!-- Setup path boxes -->
+        <rect class="box" x="736" y="310" width="150" height="110" rx="4"/>
+        <text class="name" x="748" y="338">Server route</text>
+        <text class="detail" x="748" y="364">on Vercel</text>
+        <text class="detail" x="748" y="382">rounds coordinates</text>
+        <text class="detail" x="748" y="400">drops the address</text>
+
+        <rect class="box" x="978" y="310" width="150" height="110" rx="4"/>
+        <text class="name" x="990" y="338">Clerk</text>
+        <text class="detail" x="990" y="364">sign-in</text>
+        <text class="detail" x="990" y="382">identifies the person</text>
+        <text class="detail" x="990" y="400">to Supabase</text>
+
+        <rect class="box" x="736" y="490" width="150" height="90" rx="4"/>
+        <text class="name" x="748" y="518">Census geocoder</text>
+        <text class="detail" x="748" y="544">free, no key</text>
+
+        <!-- Setup path arrows -->
+        <path class="setup" d="M1000 200 V260 H811 V308" marker-end="url(#arrow-setup)"/>
+        <text class="flow" x="905" y="251" text-anchor="middle">home + work addresses</text>
+
+        <line class="setup" x1="1090" y1="310" x2="1090" y2="202" marker-end="url(#arrow-setup)"/>
+        <text class="flow" x="1096" y="280">sign-in</text>
+        <text class="flow" x="1096" y="296">token</text>
+
+        <line class="setup" x1="811" y1="420" x2="811" y2="488" marker-start="url(#arrow-setup)" marker-end="url(#arrow-setup)"/>
+        <text class="flow" x="821" y="452">address, coordinates</text>
+
+        <path class="setup" d="M736 365 H569 V202" marker-end="url(#arrow-setup)"/>
+        <text class="flow" x="652" y="355" text-anchor="middle">rounded coordinates</text>
+
+        <!-- Legend -->
+        <line class="live" x1="10" y1="340" x2="60" y2="340"/>
+        <text class="flow" x="72" y="344">Live path: runs every minute, around the clock</text>
+        <line class="setup" x1="10" y1="370" x2="60" y2="370"/>
+        <text class="flow" x="72" y="374">Setup path: runs when someone signs in or saves a commute</text>
+      </svg>
+    </div>
+    <figcaption>The worker never talks to the page. Everything reaches the page through the database, and each person's addresses stay out of the live path.</figcaption>
+  </figure>
+
+  <section>
+    <h2>What each part sends, and what breaks if it changes</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Handoff</th><th>What it sends</th><th>If this changes or fails</th></tr></thead>
+        <tbody>
+          <tr><td>Divvy to worker</td><td>Bikes, e-bikes and docks per station, plus renting and returning flags</td><td>If Divvy renames a field, the worker must fail its run instead of saving blanks. The page then shows Down instead of bad advice.</td></tr>
+          <tr><td>Worker to database</td><td>Only stations whose counts or flags changed, plus one row in <code>worker_runs</code></td><td>If the comparison includes <code>last_reported</code>, about 1,100 stations look changed instead of 92 over 3 minutes, and Realtime messages run out much faster.</td></tr>
+          <tr><td>Database to Realtime</td><td>Each changed row</td><td>Realtime needs the table added, read access and a row-level security policy. If one is missing, the page freezes with no error.</td></tr>
+          <tr><td>Realtime to page</td><td>New counts for a nearby station, and each new run row</td><td>A dropped connection can miss updates, so the page reloads current rows when it reconnects.</td></tr>
+          <tr><td>Page to server route to Census</td><td>Typed addresses, returned as coordinates</td><td>If Census is down, nobody can save a new commute. Commutes already saved keep working.</td></tr>
+          <tr><td>Clerk to Supabase</td><td>A token saying who is signed in</td><td>If this breaks, row-level security finds no matching person and the saved commute comes back empty.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>How the page decides what to show</h2>
+    <div class="rules">
+      <div><h3>Pick-up points</h3><p><code>10 × bikes ÷ (bikes + docks)</code>. The station must be renting and have at least 1 bike.</p></div>
+      <div><h3>Drop-off points</h3><p><code>10 × docks ÷ (bikes + docks)</code>. The station must be accepting returns and have at least 1 dock.</p></div>
+      <div><h3>Stale</h3><p>The newest worker run is over 3 minutes old. The browser checks this on its own clock, because a stopped worker sends nothing. Recommendations are hidden.</p></div>
+      <div><h3>Down</h3><p>The newest worker run failed. Recommendations are hidden.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Feed check results</h2>
+    <p class="intro">Two calls to <code>station_status</code>, 3 minutes apart, on Sunday, November 1, around 11 AM Chicago time.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Measured</th><th>Result</th><th>What it means for the build</th></tr></thead>
+        <tbody>
+          <tr><td>Stations</td><td class="num">2,078</td><td>All of them have a status and a capacity.</td></tr>
+          <tr><td>Counts or flags changed</td><td class="num">92</td><td>These are the rows the worker should save.</td></tr>
+          <tr><td>Only <code>last_reported</code> changed</td><td class="num">1,045</td><td>The worker ignores this field when comparing.</td></tr>
+          <tr><td>Bikes + docks differ from capacity</td><td class="num">531</td><td>Scoring uses bikes + docks, because broken docks make capacity misleading.</td></tr>
+          <tr><td>More bikes than capacity</td><td class="num">6</td><td>Another reason not to divide by capacity.</td></tr>
+          <tr><td>Not renting / not returning</td><td class="num">15 / 15</td><td>The page leaves these out of recommendations.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
