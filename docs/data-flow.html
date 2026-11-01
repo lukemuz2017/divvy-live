@@ -56,7 +56,7 @@ a:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
 <main>
   <header>
     <h1>Divvy commute: how the data moves</h1>
-    <p>Each person saves a home and a work address. The app recommends where to pick up and drop off a bike, favoring full pick-up stations and empty drop-off stations. Planned before any code was written.</p>
+    <p>Each person saves named routes and activates one at a time. The app recommends where to pick up and drop off a bike on that route, favoring full pick-up stations and empty drop-off stations. Planned before any code was written, then updated when saved routes were added.</p>
   </header>
 
   <figure>
@@ -84,7 +84,7 @@ a:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
         <text class="detail" x="506" y="122">stations</text>
         <text class="detail" x="506" y="140">station_status</text>
         <text class="detail" x="506" y="158">worker_runs</text>
-        <text class="detail" x="506" y="176">commutes (private)</text>
+        <text class="detail" x="506" y="176">routes (private)</text>
 
         <rect class="box box-live" x="736" y="70" width="150" height="130" rx="4"/>
         <text class="name" x="748" y="98">Realtime</text>
@@ -135,7 +135,7 @@ a:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
 
         <!-- Setup path arrows -->
         <path class="setup" d="M1000 200 V260 H811 V308" marker-end="url(#arrow-setup)"/>
-        <text class="flow" x="905" y="251" text-anchor="middle">home + work addresses</text>
+        <text class="flow" x="905" y="251" text-anchor="middle">route name, addresses</text>
 
         <line class="setup" x1="1090" y1="310" x2="1090" y2="202" marker-end="url(#arrow-setup)"/>
         <text class="flow" x="1096" y="280">sign-in</text>
@@ -151,7 +151,7 @@ a:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
         <line class="live" x1="10" y1="340" x2="60" y2="340"/>
         <text class="flow" x="72" y="344">Live path: runs every minute, around the clock</text>
         <line class="setup" x1="10" y1="370" x2="60" y2="370"/>
-        <text class="flow" x="72" y="374">Setup path: runs when someone signs in or saves a commute</text>
+        <text class="flow" x="72" y="374">Setup path: runs when someone signs in or saves a route</text>
       </svg>
     </div>
     <figcaption>The worker never talks to the page. Everything reaches the page through the database, and each person's addresses stay out of the live path.</figcaption>
@@ -166,9 +166,9 @@ a:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
           <tr><td>Divvy to worker</td><td>Bikes, e-bikes and docks per station, plus renting and returning flags</td><td>If Divvy renames a field, the worker must fail its run instead of saving blanks. The page then shows Down instead of bad advice.</td></tr>
           <tr><td>Worker to database</td><td>Only stations whose counts or flags changed, plus one row in <code>worker_runs</code></td><td>If the comparison includes <code>last_reported</code>, about 1,100 stations look changed instead of 92 over 3 minutes, and Realtime messages run out much faster.</td></tr>
           <tr><td>Database to Realtime</td><td>Each changed row</td><td>Realtime needs the table added, read access and a row-level security policy. If one is missing, the page freezes with no error.</td></tr>
-          <tr><td>Realtime to page</td><td>New counts for a nearby station, and each new run row</td><td>A dropped connection can miss updates, so the page reloads current rows when it reconnects.</td></tr>
-          <tr><td>Page to server route to Census</td><td>Typed addresses, returned as coordinates</td><td>If Census is down, nobody can save a new commute. Commutes already saved keep working.</td></tr>
-          <tr><td>Clerk to Supabase</td><td>A token saying who is signed in</td><td>If this breaks, row-level security finds no matching person and the saved commute comes back empty.</td></tr>
+          <tr><td>Realtime to page</td><td>New counts for a station near the active route, and each new run row</td><td>A dropped connection can miss updates, so the page reloads current rows when it reconnects.</td></tr>
+          <tr><td>Page to server route to Census</td><td>Typed addresses, returned as coordinates</td><td>If Census is down, nobody can save a new route. Routes already saved keep working.</td></tr>
+          <tr><td>Clerk to Supabase</td><td>A token saying who is signed in</td><td>If this breaks, row-level security finds no matching person and saved routes come back empty.</td></tr>
         </tbody>
       </table>
     </div>

@@ -1,6 +1,6 @@
 # Divvy Live
 
-A commute app that helps rebalance Divvy bikes. A person saves home and work addresses, and the page recommends where to pick up and drop off a bike, with more points for full pick-up stations and empty drop-off stations. It updates without a refresh.
+A commute app that helps rebalance Divvy bikes. A person saves named routes, each with a start and end address, and activates one at a time. The page recommends where to pick up and drop off a bike on the active route, with more points for full pick-up stations and empty drop-off stations. It updates without a refresh.
 
 The data flow chart is in `docs/data-flow.html`. Read it before changing how data moves.
 
@@ -21,8 +21,9 @@ Edge Functions run on Deno, so `supabase` must stay in the `exclude` list in `ts
 - The worker records every run in `worker_runs`, including failed runs. If Divvy's response has an unexpected shape, the run fails instead of saving blanks.
 - The Supabase secret key stays on the server. It never goes in the code or in a `NEXT_PUBLIC_` variable.
 - Realtime needs three things for each table: added to the `supabase_realtime` publication, read access granted, and a row-level security policy. If one is missing, the page gets nothing and shows no error.
-- Each page subscribes only to its nearby stations, to stay within the free Realtime message limit.
-- Never store typed addresses. `commutes` holds coordinates rounded to three decimals, and only their owner can read them.
+- Each page subscribes only to the stations near its active route, to stay within the free Realtime message limit.
+- Never store typed addresses. `routes` holds coordinates rounded to three decimals, and only their owner can read them.
+- Switch the active route with the `set_active_route` database function, because a person can have only one active route at a time.
 
 ## Scoring
 
