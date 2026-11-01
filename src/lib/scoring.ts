@@ -143,26 +143,39 @@ export function closestDropoffs(stations: Station[], statuses: Map<string, Stati
   return shortestWalk(dropoffOptions(stations, statuses, point));
 }
 
-// The internal score behind the recommended trip, from 0 to 1. It weighs points and walking equally,
-// so a station 0.1 miles closer is worth the same as about 2 more points (out of 10).
-const POINTS_WEIGHT = 0.5;
-const WALK_WEIGHT = 0.5;
+export type Priority = 'walk' | 'balanced' | 'points';
+
 const MAX_POINTS = 10;
 
-export function balanceScore(option: Recommendation): number {
-  return POINTS_WEIGHT * (option.points / MAX_POINTS) + WALK_WEIGHT * (1 - option.miles / MAX_WALK_MILES);
+// How much points count in the recommended trip. Walking gets the rest.
+const POINTS_WEIGHT: Record<Priority, number> = { walk: 0.2, balanced: 0.5, points: 0.8 };
+
+// The internal score behind the recommended trip, from 0 to 1.
+export function balanceScore(option: Recommendation, priority: Priority = 'balanced'): number {
+  const pointsWeight = POINTS_WEIGHT[priority];
+  return pointsWeight * (option.points / MAX_POINTS) + (1 - pointsWeight) * (1 - option.miles / MAX_WALK_MILES);
 }
 
 // A pick-up and a drop-off don't affect each other, so the best of each makes the best trip.
-const bestBalanced = (options: Recommendation[]): Recommendation | null =>
-  [...options].sort((a, b) => balanceScore(b) - balanceScore(a) || a.miles - b.miles)[0] ?? null;
+const bestForPriority = (options: Recommendation[], priority: Priority): Recommendation | null =>
+  [...options].sort((a, b) => balanceScore(b, priority) - balanceScore(a, priority) || a.miles - b.miles)[0] ?? null;
 
-export function recommendedPickup(stations: Station[], statuses: Map<string, StationStatus>, point: Point) {
-  return bestBalanced(pickupOptions(stations, statuses, point));
+export function recommendedPickup(
+  stations: Station[],
+  statuses: Map<string, StationStatus>,
+  point: Point,
+  priority: Priority = 'balanced',
+) {
+  return bestForPriority(pickupOptions(stations, statuses, point), priority);
 }
 
-export function recommendedDropoff(stations: Station[], statuses: Map<string, StationStatus>, point: Point) {
-  return bestBalanced(dropoffOptions(stations, statuses, point));
+export function recommendedDropoff(
+  stations: Station[],
+  statuses: Map<string, StationStatus>,
+  point: Point,
+  priority: Priority = 'balanced',
+) {
+  return bestForPriority(dropoffOptions(stations, statuses, point), priority);
 }
 
 // Stations in both top threes, which the page calls out as the best of both.

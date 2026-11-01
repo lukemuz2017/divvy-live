@@ -1,13 +1,12 @@
 'use client';
 
 import { useAuth } from '@clerk/nextjs';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { routeEnds, useSupabase } from '@/lib/live-data';
 import type { Route } from '@/lib/live-data';
 import { milesBetween } from '@/lib/scoring';
-import { AccountMenu } from './AccountMenu';
 import { RouteForm } from './RouteForm';
+import { SiteHeader } from './SiteHeader';
 
 const MAX_NAME_LENGTH = 40;
 
@@ -16,12 +15,7 @@ export function SavedRoutes() {
 
   return (
     <div className="mx-auto grid max-w-3xl gap-6 px-4 py-5 md:py-8">
-      <header className="flex items-center justify-between gap-6">
-        <Link href="/" className="text-xl font-bold tracking-tight">
-          Divvy Live
-        </Link>
-        <AccountMenu />
-      </header>
+      <SiteHeader />
       {isLoaded ? <RouteManager /> : <p role="status" className="text-muted">Loading your routes…</p>}
     </div>
   );
@@ -95,14 +89,9 @@ function RouteManager() {
 
   return (
     <main className="grid gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="grid gap-1">
-          <h1 className="text-3xl font-bold tracking-tight">Saved routes</h1>
-          <p className="text-sm text-muted">We don’t store your addresses, so each route shows the distance between its ends.</p>
-        </div>
-        <Link href="/" className="text-sm font-semibold text-muted underline hover:text-ink">
-          Back to recommendations
-        </Link>
+      <div className="grid gap-1">
+        <h1 className="text-3xl font-bold tracking-tight">Saved routes</h1>
+        <p className="text-sm text-muted">We don’t store your addresses, so each route shows the distance between its ends.</p>
       </div>
 
       {deleteError && (

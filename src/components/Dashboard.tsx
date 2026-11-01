@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@clerk/nextjs';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { routeEnds, useLatestRun, useNearbyStations, useNow, useSupabase } from '@/lib/live-data';
 import type { Route } from '@/lib/live-data';
@@ -16,10 +17,19 @@ import {
   sharedStationIds,
   stationsInRange,
 } from '@/lib/scoring';
-import { AccountMenu } from './AccountMenu';
+import type { Priority, Recommendation } from '@/lib/scoring';
 import { FreshnessBadge, FreshnessBanner, timeAgo } from './FreshnessBadge';
 import { RouteForm } from './RouteForm';
+import { SiteHeader } from './SiteHeader';
 import { RecommendedTrip, TripPlan } from './TripPlan';
+
+const PRIORITIES: { value: Priority; label: string }[] = [
+  { value: 'walk', label: 'Walking' },
+  { value: 'balanced', label: 'Balanced' },
+  { value: 'points', label: 'Points' },
+];
+
+type TripNotice = { kind: 'saved'; tripId: string; points: number } | { kind: 'error'; message: string } | { kind: 'removed' };
 
 function LoadingCards() {
   return (
@@ -42,8 +52,8 @@ export function Dashboard() {
     <div className="mx-auto grid max-w-5xl gap-6 px-4 py-5 md:py-8">
       {isLoaded ? <LiveDashboard /> : <LoadingCards />}
       <footer className="text-sm text-muted">
-        A class project using Divvy’s public data. Not affiliated with Divvy or Lyft. Walk times are straight-line
-        estimates.
+        A class project using Divvy’s public data. Not affiliated with Divvy or Lyft. Points are this app’s own estimate,
+        not Bike Angels points. Walk times are straight-line estimates.
       </footer>
     </div>
   );
@@ -59,6 +69,8 @@ function LiveDashboard() {
   const [adding, setAdding] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [reversed, setReversed] = useState(false);
+  const [choosing, setChoosing] = useState(false);
+  const [tripNotice, setTripNotice] = useState<TripNotice | null>(null);
 
   const activeRoute = routes.find((route) => route.is_active) ?? null;
   const nearby = useNearbyStations(supabase, activeRoute);
@@ -79,6 +91,7 @@ function LiveDashboard() {
   const activate = async (routeId: string) => {
     setReversed(false);
     setConfirmingDelete(false);
+    setTripNotice(null);
     setRoutes((previous) => previous.map((route) => ({ ...route, is_active: route.id === routeId })));
     const { error } = await supabase.rpc('set_active_route', { route_id: routeId });
     if (error) await loadRoutes();
@@ -88,6 +101,35 @@ function LiveDashboard() {
     setAdding(false);
     setRoutes((previous) => [...previous, route]);
     await activate(route.id);
+  };
+
+  const setPriority = async (value: Priority) => {
+    if (!activeRoute) return;
+    const column = reversed ? 'reverse_priority' : 'forward_priority';
+    setRoutes((previous) => previous.map((route) => (route.id === activeRoute.id ? { ...route, [column]: value } : route)));
+    const { error } = await supabase.from('routes').update({ [column]: value, updated_at: new Date().toISOString() }).eq('id', activeRoute.id);
+    if (error) await loadRoutes();
+  };
+
+  // The database works out the points, so what's saved can differ slightly if a bike just moved.
+  const chooseTrip = async (pickup: Recommendation, dropoff: Recommendation) => {
+    if (!activeRoute) return;
+    setChoosing(true);
+    setTripNotice(null);
+    const { data, error } = await supabase.rpc('choose_trip', {
+      route_id: activeRoute.id,
+      pickup_id: pickup.station.station_id,
+      dropoff_id: dropoff.station.station_id,
+      reversed,
+    });
+    setChoosing(false);
+    if (error) setTripNotice({ kind: 'error', message: error.message });
+    else setTripNotice({ kind: 'saved', tripId: data.id, points: data.points });
+  };
+
+  const undoTrip = async (tripId: string) => {
+    const { error } = await supabase.from('trips').delete().eq('id', tripId);
+    setTripNotice(error ? { kind: 'error', message: 'We couldn’t remove that trip. Try again from your profile.' } : { kind: 'removed' });
   };
 
   const deleteRoute = async (routeId: string) => {
@@ -103,8 +145,9 @@ function LiveDashboard() {
   const pointDropoffs = to ? rankDropoffs(nearby.stations, nearby.statuses, to) : [];
   const walkPickups = from ? closestPickups(nearby.stations, nearby.statuses, from) : [];
   const walkDropoffs = to ? closestDropoffs(nearby.stations, nearby.statuses, to) : [];
-  const bestPickup = from ? recommendedPickup(nearby.stations, nearby.statuses, from) : null;
-  const bestDropoff = to ? recommendedDropoff(nearby.stations, nearby.statuses, to) : null;
+  const priority: Priority = activeRoute ? (reversed ? activeRoute.reverse_priority : activeRoute.forward_priority) : 'balanced';
+  const bestPickup = from ? recommendedPickup(nearby.stations, nearby.statuses, from, priority) : null;
+  const bestDropoff = to ? recommendedDropoff(nearby.stations, nearby.statuses, to, priority) : null;
   const pickupsInBoth = sharedStationIds(pointPickups, walkPickups);
   const dropoffsInBoth = sharedStationIds(pointDropoffs, walkDropoffs);
   const stationsNearFrom = from ? stationsInRange(nearby.stations, from).length : 0;
@@ -128,13 +171,9 @@ function LiveDashboard() {
 
   return (
     <>
-      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h1 className="text-xl font-bold tracking-tight">Divvy Live</h1>
-          <FreshnessBadge freshness={freshness} run={run} now={now} />
-        </div>
-        <AccountMenu />
-      </header>
+      <SiteHeader />
+      <h1 className="sr-only">Your recommended trips</h1>
+      <FreshnessBadge freshness={freshness} run={run} now={now} />
 
       {routesFailed && (
         <section className="grid gap-1 rounded-lg bg-bad-soft p-4 text-bad" role="alert">
@@ -180,7 +219,22 @@ function LiveDashboard() {
 
       {activeRoute && (
         <>
-          <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div role="group" aria-label="What to prioritize in this direction" className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="font-semibold text-muted">Prioritize in this direction</span>
+              <div className="flex overflow-hidden rounded-md border border-line bg-surface">
+                {PRIORITIES.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => void setPriority(option.value)}
+                    aria-pressed={priority === option.value}
+                    className={`cursor-pointer px-3 py-1 font-semibold ${priority === option.value ? 'bg-bike text-surface' : 'text-muted hover:text-ink'}`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="flex flex-wrap items-center gap-3 text-sm">
               {confirmingDelete ? (
                 <>
@@ -209,6 +263,27 @@ function LiveDashboard() {
 
           <FreshnessBanner freshness={freshness} run={run} now={now} />
 
+          {tripNotice && (
+            <p
+              role="status"
+              className={`flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg p-4 text-sm ${tripNotice.kind === 'error' ? 'bg-warn-soft text-warn' : 'bg-bike-soft'}`}
+            >
+              {tripNotice.kind === 'error' && tripNotice.message}
+              {tripNotice.kind === 'removed' && 'Trip removed from your points.'}
+              {tripNotice.kind === 'saved' && (
+                <>
+                  <span className="font-semibold">Trip saved: +{tripNotice.points} points.</span>
+                  <Link href="/profile" className="underline">
+                    See your profile
+                  </Link>
+                  <button onClick={() => void undoTrip(tripNotice.tripId)} className="cursor-pointer underline">
+                    Undo
+                  </button>
+                </>
+              )}
+            </p>
+          )}
+
           {freshness === 'loading' || nearby.loading ? (
             <LoadingCards />
           ) : nearby.failed ? (
@@ -218,7 +293,15 @@ function LiveDashboard() {
             </section>
           ) : showOptions ? (
             <>
-              {bestPickup && bestDropoff && <RecommendedTrip pickup={bestPickup} dropoff={bestDropoff} />}
+              {bestPickup && bestDropoff && (
+                <RecommendedTrip
+                  pickup={bestPickup}
+                  dropoff={bestDropoff}
+                  priority={priority}
+                  choosing={choosing}
+                  onChoose={(pickup, dropoff) => void chooseTrip(pickup, dropoff)}
+                />
+              )}
 
               <div className="grid gap-8 md:grid-cols-2 md:gap-6">
                 <TripPlan
@@ -232,6 +315,8 @@ function LiveDashboard() {
                   changeCounts={nearby.changeCounts}
                   pickupEmptyMessage={pickupEmptyMessage}
                   dropoffEmptyMessage={dropoffEmptyMessage}
+                  choosing={choosing}
+                  onChoose={(pickup, dropoff) => void chooseTrip(pickup, dropoff)}
                 />
                 <TripPlan
                   title="Most points"
@@ -245,6 +330,8 @@ function LiveDashboard() {
                   note={tripsMatch ? 'This is the same trip as the shortest walk right now.' : undefined}
                   pickupEmptyMessage={pickupEmptyMessage}
                   dropoffEmptyMessage={dropoffEmptyMessage}
+                  choosing={choosing}
+                  onChoose={(pickup, dropoff) => void chooseTrip(pickup, dropoff)}
                 />
               </div>
 

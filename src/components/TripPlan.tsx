@@ -1,14 +1,44 @@
 import { formatMiles } from '@/lib/scoring';
-import type { Recommendation } from '@/lib/scoring';
+import type { Priority, Recommendation } from '@/lib/scoring';
 import { StationOptions } from './StationOptions';
 import type { Measure } from './StationOptions';
 
-export function RecommendedTrip({ pickup, dropoff }: { pickup: Recommendation; dropoff: Recommendation }) {
+const RECOMMENDED_DESCRIPTION: Record<Priority, string> = {
+  walk: 'Favors a shorter walk over points, based on your setting for this direction.',
+  balanced: 'The best balance of helping rebalance bikes and keeping your walk short, right now.',
+  points: 'Favors more points over a shorter walk, based on your setting for this direction.',
+};
+
+function ChooseTripButton({ busy, onClick }: { busy: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={busy}
+      className="cursor-pointer justify-self-start rounded-md bg-bike px-4 py-2 font-semibold text-surface hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+    >
+      {busy ? 'Saving…' : 'Choose this trip'}
+    </button>
+  );
+}
+
+export function RecommendedTrip({
+  pickup,
+  dropoff,
+  priority,
+  choosing,
+  onChoose,
+}: {
+  pickup: Recommendation;
+  dropoff: Recommendation;
+  priority: Priority;
+  choosing: boolean;
+  onChoose: (pickup: Recommendation, dropoff: Recommendation) => void;
+}) {
   return (
     <section className="grid gap-4 rounded-lg border-2 border-bike bg-surface p-5">
       <div className="grid gap-1">
         <h2 className="text-2xl font-bold">Recommended trip</h2>
-        <p className="text-sm text-muted">The best balance of helping rebalance bikes and keeping your walk short, right now.</p>
+        <p className="text-sm text-muted">{RECOMMENDED_DESCRIPTION[priority]}</p>
       </div>
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
         <div className="grid min-w-0 gap-1 text-lg font-semibold text-balance">
@@ -32,6 +62,7 @@ export function RecommendedTrip({ pickup, dropoff }: { pickup: Recommendation; d
           </div>
         </dl>
       </div>
+      <ChooseTripButton busy={choosing} onClick={() => onChoose(pickup, dropoff)} />
     </section>
   );
 }
@@ -48,6 +79,8 @@ export function TripPlan({
   note,
   pickupEmptyMessage,
   dropoffEmptyMessage,
+  choosing,
+  onChoose,
 }: {
   title: string;
   description: string;
@@ -60,6 +93,8 @@ export function TripPlan({
   note?: string;
   pickupEmptyMessage: string;
   dropoffEmptyMessage: string;
+  choosing: boolean;
+  onChoose: (pickup: Recommendation, dropoff: Recommendation) => void;
 }) {
   const pickup = pickups[0];
   const dropoff = dropoffs[0];
@@ -101,6 +136,7 @@ export function TripPlan({
               {measure === 'points' ? walkingStat : pointsStat}
             </dl>
             {note && <p className="text-sm text-muted">{note}</p>}
+            <ChooseTripButton busy={choosing} onClick={() => onChoose(pickup, dropoff)} />
           </>
         ) : (
           <p className="text-muted">We can’t recommend a full trip right now. See what’s available below.</p>

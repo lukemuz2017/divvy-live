@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { boundsAround, isCompleteRun, isCompleteStatus, stationsInRange } from './scoring.ts';
-import type { Point, Station, StationStatus, WorkerRun } from './scoring.ts';
+import type { Point, Priority, Station, StationStatus, WorkerRun } from './scoring.ts';
 
 // Realtime filters accept up to 100 values, so each end of a route watches its 50 nearest stations.
 const MAX_STATIONS_PER_END = 50;
@@ -18,6 +18,8 @@ export type Route = {
   start_lon: number;
   end_lat: number;
   end_lon: number;
+  forward_priority: Priority;
+  reverse_priority: Priority;
 };
 
 export function routeEnds(route: Route): { start: Point; end: Point } {

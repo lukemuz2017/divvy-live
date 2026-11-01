@@ -13,6 +13,10 @@ The data flow chart is in [`docs/data-flow.html`](docs/data-flow.html).
 
 The page shows how recently the worker checked Divvy. If the data is more than 3 minutes old or the last check failed, it hides recommendations.
 
+## Choosing trips
+
+Each route can favor walking, points or a balance, set separately for each direction. Choosing a trip adds its points to your total on the Profile page, where you can compare with other riders on the leaderboard. The database works out the points, so scores can't be faked from the browser. It can't confirm a ride happened, so trips work on the honor system with one every 30 minutes. These points are this app's own estimate, not Bike Angels points.
+
 ## Running it
 
 ```
@@ -26,6 +30,6 @@ Fill in `.env.local` with your Clerk and Supabase keys. `clerk env pull` fetches
 ## Tests
 
 - `npm test` runs the worker on a saved copy of Divvy's response, plus the scoring and address rules.
-- `supabase/tests/sync_divvy.sql` checks what the database saves. It rolls back its changes when it finishes.
+- `supabase/tests/sync_divvy.sql` checks what the database saves, and `supabase/tests/choose_trip.sql` checks trips and the leaderboard. Both roll back their changes when they finish.
 
 A class project for Design, Build, Ship. Not affiliated with Divvy or Lyft.

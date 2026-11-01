@@ -22,12 +22,21 @@ function RoutesIcon() {
   );
 }
 
+function ProfileIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <path d="M2.5 13.5h11M4 13.5v-4M8 13.5v-10M12 13.5v-7" />
+    </svg>
+  );
+}
+
 export function AccountMenu() {
   const { user } = useUser();
 
   return (
     <UserButton appearance={user?.hasImage ? undefined : DEFAULT_AVATAR_APPEARANCE}>
       <UserButton.MenuItems>
+        <UserButton.Link label="Points and leaderboard" labelIcon={<ProfileIcon />} href="/profile" />
         <UserButton.Link label="Saved routes" labelIcon={<RoutesIcon />} href="/saved-routes" />
       </UserButton.MenuItems>
     </UserButton>

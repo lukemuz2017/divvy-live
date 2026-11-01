@@ -84,7 +84,7 @@ a:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
         <text class="detail" x="506" y="118">stations</text>
         <text class="detail" x="506" y="136">station_status</text>
         <text class="detail" x="506" y="154">worker_runs</text>
-        <text class="detail" x="506" y="172">routes (private)</text>
+        <text class="detail" x="506" y="172">routes, trips</text>
         <text class="detail" x="506" y="191">sync_divvy compares</text>
 
         <rect class="box box-live" x="736" y="70" width="150" height="130" rx="4"/>
@@ -153,7 +153,7 @@ a:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
         <line class="live" x1="10" y1="340" x2="60" y2="340"/>
         <text class="flow" x="72" y="344">Live path: runs every minute, around the clock</text>
         <line class="setup" x1="10" y1="370" x2="60" y2="370"/>
-        <text class="flow" x="72" y="374">Setup path: runs when someone signs in or saves a route</text>
+        <text class="flow" x="72" y="374">Setup path: runs when someone signs in or saves a route. Choosing a trip goes straight to the database.</text>
       </svg>
     </div>
     <figcaption>The worker never talks to the page. Everything reaches the page through the database, and each person's addresses stay out of the live path.</figcaption>
@@ -170,6 +170,7 @@ a:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
           <tr><td>Database to Realtime</td><td>Each changed row</td><td>Realtime needs the table added, read access and a row-level security policy. If one is missing, the page freezes with no error.</td></tr>
           <tr><td>Realtime to page</td><td>New counts for a station near the active route, and each new run row</td><td>A dropped connection can miss updates, so the page reloads current rows when it reconnects.</td></tr>
           <tr><td>Page to server route to Census</td><td>Typed addresses, returned as coordinates</td><td>If Census is down, nobody can save a new route. Routes already saved keep working.</td></tr>
+          <tr><td>Page to database</td><td>A chosen trip: which route and which two stations</td><td>The <code>choose_trip</code> function re-checks the stations and works out the points itself. If the page could send its own points, anyone could fake a leaderboard score.</td></tr>
           <tr><td>Clerk to Supabase</td><td>A token saying who is signed in</td><td>If this breaks, row-level security finds no matching person and saved routes come back empty.</td></tr>
         </tbody>
       </table>

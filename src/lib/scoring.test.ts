@@ -140,6 +140,16 @@ test('the balance score weighs points and walking equally', () => {
   assert.equal(balanceScore(option(0, 0)), 0.5);
 });
 
+test('the priority setting shifts the recommendation toward walking or points', () => {
+  const stations = [station('close-half', 0.0005), station('far-full', 0.006)];
+  const statuses = statusMap(status('close-half', 5, 5), status('far-full', 10, 0));
+
+  assert.equal(recommendedPickup(stations, statuses, home, 'walk')?.station.station_id, 'close-half');
+  assert.equal(recommendedPickup(stations, statuses, home, 'points')?.station.station_id, 'far-full');
+  assert.equal(balanceScore(option(10, 0.5), 'walk'), 0.2);
+  assert.equal(balanceScore(option(10, 0.5), 'points'), 0.8);
+});
+
 test('the recommended pick-up can beat both the closest and the fullest station', () => {
   const stations = [station('closest-empty', 0.0005), station('middle', 0.002), station('fullest-far', 0.007)];
   const statuses = statusMap(status('closest-empty', 1, 9), status('middle', 8, 2), status('fullest-far', 10, 0));
