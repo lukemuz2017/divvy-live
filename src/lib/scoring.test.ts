@@ -6,6 +6,7 @@ import {
   closestDropoffs,
   closestPickups,
   dropoffPoints,
+  formatMiles,
   freshnessOf,
   milesBetween,
   pickupPoints,
@@ -110,6 +111,12 @@ test('public racks are left out of every recommendation', () => {
   assert.deepEqual(rankDropoffs([rack, dock], statuses, home).map((o) => o.station.station_id), ['dock']);
   assert.deepEqual(closestDropoffs([rack, dock], statuses, home).map((o) => o.station.station_id), ['dock']);
   assert.deepEqual(rankPickups([rack, dock], statuses, home).map((o) => o.station.station_id), ['dock']);
+});
+
+test('distances read in tenths of a mile, and never as zero', () => {
+  assert.equal(formatMiles(0.42), '0.4 mi');
+  assert.equal(formatMiles(0.01), '0.1 mi');
+  assert.equal(formatMiles(1.26), '1.3 mi');
 });
 
 test('only the top three options are shown', () => {

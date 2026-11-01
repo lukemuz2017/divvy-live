@@ -1,9 +1,12 @@
+import { formatMiles } from '@/lib/scoring';
 import type { Recommendation } from '@/lib/scoring';
 import { StationOptions } from './StationOptions';
+import type { Measure } from './StationOptions';
 
 export function TripPlan({
   title,
   description,
+  measure,
   pickups,
   dropoffs,
   changeCounts,
@@ -13,6 +16,7 @@ export function TripPlan({
 }: {
   title: string;
   description: string;
+  measure: Measure;
   pickups: Recommendation[];
   dropoffs: Recommendation[];
   changeCounts: Map<string, number>;
@@ -22,6 +26,19 @@ export function TripPlan({
 }) {
   const pickup = pickups[0];
   const dropoff = dropoffs[0];
+
+  const pointsStat = pickup && dropoff && (
+    <div className="grid gap-0.5">
+      <dt className="text-xs text-muted">Points</dt>
+      <dd className="font-mono text-2xl font-medium text-bike">+{pickup.points + dropoff.points}</dd>
+    </div>
+  );
+  const walkingStat = pickup && dropoff && (
+    <div className="grid gap-0.5">
+      <dt className="text-xs text-muted">Total walking</dt>
+      <dd className="font-mono text-2xl font-medium">{formatMiles(pickup.miles + dropoff.miles)}</dd>
+    </div>
+  );
 
   return (
     <section className="grid content-start gap-5">
@@ -43,14 +60,8 @@ export function TripPlan({
               </p>
             </div>
             <dl className="flex gap-8">
-              <div className="grid gap-0.5">
-                <dt className="text-xs text-muted">Points</dt>
-                <dd className="font-mono text-2xl font-medium text-bike">+{pickup.points + dropoff.points}</dd>
-              </div>
-              <div className="grid gap-0.5">
-                <dt className="text-xs text-muted">Total walking</dt>
-                <dd className="font-mono text-2xl font-medium">{pickup.walkMinutes + dropoff.walkMinutes} min</dd>
-              </div>
+              {measure === 'points' ? pointsStat : walkingStat}
+              {measure === 'points' ? walkingStat : pointsStat}
             </dl>
             {note && <p className="text-sm text-muted">{note}</p>}
           </>
@@ -59,8 +70,8 @@ export function TripPlan({
         )}
       </div>
 
-      <StationOptions title="Pick up" options={pickups} changeCounts={changeCounts} emptyMessage={pickupEmptyMessage} />
-      <StationOptions title="Drop off" options={dropoffs} changeCounts={changeCounts} emptyMessage={dropoffEmptyMessage} />
+      <StationOptions title="Pick up" options={pickups} measure={measure} changeCounts={changeCounts} emptyMessage={pickupEmptyMessage} />
+      <StationOptions title="Drop off" options={dropoffs} measure={measure} changeCounts={changeCounts} emptyMessage={dropoffEmptyMessage} />
     </section>
   );
 }

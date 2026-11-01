@@ -261,6 +261,7 @@ function LiveDashboard() {
                 <TripPlan
                   title="Shortest walk"
                   description="The closest stations with a bike to take and a dock to return it to."
+                  measure="miles"
                   pickups={walkPickups}
                   dropoffs={walkDropoffs}
                   changeCounts={nearby.changeCounts}
@@ -270,6 +271,7 @@ function LiveDashboard() {
                 <TripPlan
                   title="Most points"
                   description="The stations that need the most help, within a half-mile walk of each end."
+                  measure="points"
                   pickups={pointPickups}
                   dropoffs={pointDropoffs}
                   changeCounts={nearby.changeCounts}

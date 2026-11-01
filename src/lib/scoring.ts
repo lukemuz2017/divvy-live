@@ -54,6 +54,9 @@ export function milesBetween(a: Point, b: Point): number {
   return 2 * EARTH_RADIUS_MILES * Math.asin(Math.sqrt(h));
 }
 
+// Saved locations are rounded to about a block, so anything closer still reads as 0.1 miles.
+export const formatMiles = (miles: number) => `${Math.max(0.1, miles).toFixed(1)} mi`;
+
 // A box around a point, so the database only returns stations close enough to be worth measuring.
 export function boundsAround(point: Point) {
   const latRange = MAX_WALK_MILES / MILES_PER_DEGREE_LAT;
