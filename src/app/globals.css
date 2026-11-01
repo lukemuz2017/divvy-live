@@ -1,0 +1,97 @@
+@import 'tailwindcss';
+
+/* Colors come from the Chicago flag: its light blue for bikes and its red for trouble. */
+:root {
+  --bg: #eef4f7;
+  --surface: #ffffff;
+  --ink: #12222b;
+  --muted: #566973;
+  --line: #d3dfe5;
+  --bike: #0a78ad;
+  --bike-soft: #d8eef8;
+  --dock: #c3d2da;
+  --good: #1b7f4c;
+  --warn: #9a6200;
+  --warn-soft: #fdf1da;
+  --bad: #c8102e;
+  --bad-soft: #fde6e9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e171c;
+    --surface: #17242b;
+    --ink: #e8f1f5;
+    --muted: #9db1bb;
+    --line: #2d3f48;
+    --bike: #5cc1ee;
+    --bike-soft: #16384a;
+    --dock: #3b4f59;
+    --good: #5fd39a;
+    --warn: #f0b755;
+    --warn-soft: #3a2c10;
+    --bad: #ff8392;
+    --bad-soft: #421a20;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-bike: var(--bike);
+  --color-bike-soft: var(--bike-soft);
+  --color-dock: var(--dock);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --font-display: var(--font-archivo), 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: var(--font-plex-mono), Consolas, monospace;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-archivo), 'Helvetica Neue', Arial, sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--bike);
+  outline-offset: 2px;
+}
+
+/* A station flashes when Realtime delivers a change, which is what makes the page feel live. */
+@keyframes station-changed {
+  from {
+    background-color: var(--bike-soft);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.station-changed {
+  animation: station-changed 2.4s ease-out;
+}
+
+@keyframes live-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.live-pulse {
+  animation: live-pulse 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .station-changed,
+  .live-pulse {
+    animation: none;
+  }
+}
