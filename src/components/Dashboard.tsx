@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth, UserButton, useUser } from '@clerk/nextjs';
+import { useAuth } from '@clerk/nextjs';
 import { useEffect, useState } from 'react';
 import { routeEnds, useLatestRun, useNearbyStations, useNow, useSupabase } from '@/lib/live-data';
 import type { Route } from '@/lib/live-data';
@@ -16,30 +16,10 @@ import {
   sharedStationIds,
   stationsInRange,
 } from '@/lib/scoring';
+import { AccountMenu } from './AccountMenu';
 import { FreshnessBadge, FreshnessBanner, timeAgo } from './FreshnessBadge';
 import { RouteForm } from './RouteForm';
-import { RoutesPanel } from './RoutesPanel';
 import { RecommendedTrip, TripPlan } from './TripPlan';
-
-// Used unless the person has uploaded their own photo.
-const DEFAULT_AVATAR_APPEARANCE = {
-  elements: {
-    userButtonAvatarBox: 'divvy-avatar',
-    userButtonAvatarImage: 'divvy-avatar-image',
-    userPreviewAvatarBox: 'divvy-avatar',
-    userPreviewAvatarImage: 'divvy-avatar-image',
-  },
-};
-
-function RoutesIcon() {
-  return (
-    <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-      <circle cx="3.5" cy="3.5" r="2" />
-      <circle cx="12.5" cy="12.5" r="2" />
-      <path d="M5.5 3.5h5a2.5 2.5 0 0 1 0 5h-5a2.5 2.5 0 0 0 0 5h5" />
-    </svg>
-  );
-}
 
 function LoadingCards() {
   return (
@@ -71,15 +51,13 @@ export function Dashboard() {
 
 function LiveDashboard() {
   const supabase = useSupabase();
-  const { user } = useUser();
   const now = useNow(1000);
   const { run, loaded: runLoaded } = useLatestRun(supabase);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [routesLoaded, setRoutesLoaded] = useState(false);
   const [routesFailed, setRoutesFailed] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
-  const [showingAllRoutes, setShowingAllRoutes] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [reversed, setReversed] = useState(false);
 
   const activeRoute = routes.find((route) => route.is_active) ?? null;
@@ -100,7 +78,7 @@ function LiveDashboard() {
 
   const activate = async (routeId: string) => {
     setReversed(false);
-    setConfirmingDeleteId(null);
+    setConfirmingDelete(false);
     setRoutes((previous) => previous.map((route) => ({ ...route, is_active: route.id === routeId })));
     const { error } = await supabase.rpc('set_active_route', { route_id: routeId });
     if (error) await loadRoutes();
@@ -113,7 +91,7 @@ function LiveDashboard() {
   };
 
   const deleteRoute = async (routeId: string) => {
-    setConfirmingDeleteId(null);
+    setConfirmingDelete(false);
     await supabase.from('routes').delete().eq('id', routeId);
     await loadRoutes();
   };
@@ -155,15 +133,7 @@ function LiveDashboard() {
           <h1 className="text-xl font-bold tracking-tight">Divvy Live</h1>
           <FreshnessBadge freshness={freshness} run={run} now={now} />
         </div>
-        <UserButton appearance={user?.hasImage ? undefined : DEFAULT_AVATAR_APPEARANCE}>
-          <UserButton.MenuItems>
-            <UserButton.Action
-              label="Saved routes"
-              labelIcon={<RoutesIcon />}
-              onClick={() => setShowingAllRoutes(true)}
-            />
-          </UserButton.MenuItems>
-        </UserButton>
+        <AccountMenu />
       </header>
 
       {routesFailed && (
@@ -196,18 +166,6 @@ function LiveDashboard() {
         </nav>
       )}
 
-      {showingAllRoutes && routes.length > 0 && (
-        <RoutesPanel
-          routes={routes}
-          confirmingDeleteId={confirmingDeleteId}
-          onUse={(routeId) => void activate(routeId)}
-          onAskDelete={setConfirmingDeleteId}
-          onCancelDelete={() => setConfirmingDeleteId(null)}
-          onDelete={(routeId) => void deleteRoute(routeId)}
-          onClose={() => setShowingAllRoutes(false)}
-        />
-      )}
-
       {showForm && (
         <RouteForm isFirst={routes.length === 0} onSaved={(route) => void onSaved(route)} onCancel={() => setAdding(false)} />
       )}
@@ -224,18 +182,18 @@ function LiveDashboard() {
         <>
           <div className="flex flex-wrap items-center justify-end gap-3">
             <div className="flex flex-wrap items-center gap-3 text-sm">
-              {confirmingDeleteId === activeRoute.id && !showingAllRoutes ? (
+              {confirmingDelete ? (
                 <>
                   <span>Delete {activeRoute.name}?</span>
                   <button onClick={() => void deleteRoute(activeRoute.id)} className="cursor-pointer font-semibold text-bad underline">
                     Delete route
                   </button>
-                  <button onClick={() => setConfirmingDeleteId(null)} className="cursor-pointer text-muted underline">
+                  <button onClick={() => setConfirmingDelete(false)} className="cursor-pointer text-muted underline">
                     Keep it
                   </button>
                 </>
               ) : (
-                <button onClick={() => setConfirmingDeleteId(activeRoute.id)} className="cursor-pointer text-muted underline hover:text-ink">
+                <button onClick={() => setConfirmingDelete(true)} className="cursor-pointer text-muted underline hover:text-ink">
                   Delete this route
                 </button>
               )}
