@@ -1,0 +1,74 @@
+{
+  "data": {
+    "stations": [
+      {
+        "station_id": "a3b0fae6-a135-11e9-9cda-0a87ae2ba916",
+        "name": "Glenwood Ave & Touhy Ave",
+        "short_name": "CHI01143",
+        "lon": -87.666058,
+        "lat": 42.012701,
+        "capacity": 15,
+        "rental_uris": {
+          "android": "https://chi.lft.to/lastmile_qr_scan",
+          "ios": "https://chi.lft.to/lastmile_qr_scan"
+        },
+        "is_charging": false
+      },
+      {
+        "station_id": "2170354014030504722",
+        "name": "Albany Ave & 16th St",
+        "short_name": "CHI02186",
+        "lon": -87.70302,
+        "lat": 41.85932,
+        "capacity": 8,
+        "rental_uris": {
+          "android": "https://chi.lft.to/lastmile_qr_scan",
+          "ios": "https://chi.lft.to/lastmile_qr_scan"
+        },
+        "is_charging": false
+      },
+      {
+        "station_id": "2197048925058850020",
+        "name": "Woodlawn Ave & 103rd St",
+        "short_name": "CHI02221",
+        "lon": -87.59404,
+        "lat": 41.70738,
+        "capacity": 4,
+        "rental_uris": {
+          "android": "https://chi.lft.to/lastmile_qr_scan",
+          "ios": "https://chi.lft.to/lastmile_qr_scan"
+        },
+        "is_charging": false
+      },
+      {
+        "station_id": "a3a528d0-a135-11e9-9cda-0a87ae2ba916",
+        "name": "Stony Island Ave & 64th St",
+        "short_name": "CHI00557",
+        "lon": -87.586647,
+        "lat": 41.778881,
+        "capacity": 11,
+        "rental_uris": {
+          "android": "https://chi.lft.to/lastmile_qr_scan",
+          "ios": "https://chi.lft.to/lastmile_qr_scan"
+        },
+        "is_charging": false
+      },
+      {
+        "station_id": "1969236968943731106",
+        "name": "Menard Ave & Lawrence Ave",
+        "short_name": "CHI01910",
+        "lon": -87.77274,
+        "lat": 41.96788,
+        "capacity": 8,
+        "rental_uris": {
+          "android": "https://chi.lft.to/lastmile_qr_scan",
+          "ios": "https://chi.lft.to/lastmile_qr_scan"
+        },
+        "is_charging": false
+      }
+    ]
+  },
+  "last_updated": 1793567683,
+  "ttl": 60,
+  "version": "2.3"
+}

@@ -61,7 +61,7 @@ a:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
 
   <figure>
     <div class="scroll">
-      <svg viewBox="0 0 1140 600" role="img" aria-label="Divvy station data flows every minute from the Divvy feeds to a Supabase Edge Function, which saves only changed rows to the database. Realtime pushes those changes to the page on Vercel. Separately, a person's addresses go from the page through a server route to the Census geocoder, and rounded coordinates are saved to the database.">
+      <svg viewBox="0 0 1140 600" role="img" aria-label="Divvy station data flows every minute from the Divvy feeds to a Supabase Edge Function, which sends it to the database, where only changed rows are written. Realtime pushes those changes to the page on Vercel. Separately, a person's addresses go from the page through a server route to the Census geocoder, and rounded coordinates are saved to the database.">
         <defs>
           <marker id="arrow-live" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head-live" d="M0 0 L10 5 L0 10 Z"/></marker>
           <marker id="arrow-setup" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="head-setup" d="M0 0 L10 5 L0 10 Z"/></marker>
@@ -77,14 +77,15 @@ a:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
         <text class="name" x="264" y="98">Worker</text>
         <text class="detail" x="264" y="124">Edge Function</text>
         <text class="detail" x="264" y="142">run by Supabase Cron</text>
-        <text class="detail" x="264" y="160">compares counts</text>
+        <text class="detail" x="264" y="160">checks the feed</text>
 
         <rect class="box box-live" x="494" y="70" width="150" height="130" rx="4"/>
         <text class="name" x="506" y="98">Database</text>
-        <text class="detail" x="506" y="122">stations</text>
-        <text class="detail" x="506" y="140">station_status</text>
-        <text class="detail" x="506" y="158">worker_runs</text>
-        <text class="detail" x="506" y="176">routes (private)</text>
+        <text class="detail" x="506" y="118">stations</text>
+        <text class="detail" x="506" y="136">station_status</text>
+        <text class="detail" x="506" y="154">worker_runs</text>
+        <text class="detail" x="506" y="172">routes (private)</text>
+        <text class="detail" x="506" y="191">sync_divvy compares</text>
 
         <rect class="box box-live" x="736" y="70" width="150" height="130" rx="4"/>
         <text class="name" x="748" y="98">Realtime</text>
@@ -104,11 +105,12 @@ a:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
         <text class="flow" x="206" y="123" text-anchor="middle">every 60s</text>
 
         <line class="live" x1="402" y1="135" x2="492" y2="135" marker-end="url(#arrow-live)"/>
-        <text class="flow" x="448" y="107" text-anchor="middle">changed rows,</text>
+        <text class="flow" x="448" y="107" text-anchor="middle">checked rows,</text>
         <text class="flow" x="448" y="123" text-anchor="middle">1 run row</text>
 
         <line class="live" x1="644" y1="135" x2="734" y2="135" marker-end="url(#arrow-live)"/>
-        <text class="flow" x="690" y="123" text-anchor="middle">row changes</text>
+        <text class="flow" x="690" y="107" text-anchor="middle">only rows</text>
+        <text class="flow" x="690" y="123" text-anchor="middle">that changed</text>
 
         <line class="live" x1="886" y1="135" x2="976" y2="135" marker-end="url(#arrow-live)"/>
         <text class="flow" x="932" y="123" text-anchor="middle">push</text>
@@ -164,7 +166,7 @@ a:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
         <thead><tr><th>Handoff</th><th>What it sends</th><th>If this changes or fails</th></tr></thead>
         <tbody>
           <tr><td>Divvy to worker</td><td>Bikes, e-bikes and docks per station, plus renting and returning flags</td><td>If Divvy renames a field, the worker must fail its run instead of saving blanks. The page then shows Down instead of bad advice.</td></tr>
-          <tr><td>Worker to database</td><td>Only stations whose counts or flags changed, plus one row in <code>worker_runs</code></td><td>If the comparison includes <code>last_reported</code>, about 1,100 stations look changed instead of 92 over 3 minutes, and Realtime messages run out much faster.</td></tr>
+          <tr><td>Worker to database</td><td>Every station it checked, plus one row in <code>worker_runs</code>. The <code>sync_divvy</code> database function writes only the stations whose counts or flags changed, so the worker never downloads every row.</td><td>If the comparison includes <code>last_reported</code>, about 1,100 stations look changed instead of 92 over 3 minutes, and Realtime messages run out much faster.</td></tr>
           <tr><td>Database to Realtime</td><td>Each changed row</td><td>Realtime needs the table added, read access and a row-level security policy. If one is missing, the page freezes with no error.</td></tr>
           <tr><td>Realtime to page</td><td>New counts for a station near the active route, and each new run row</td><td>A dropped connection can miss updates, so the page reloads current rows when it reconnects.</td></tr>
           <tr><td>Page to server route to Census</td><td>Typed addresses, returned as coordinates</td><td>If Census is down, nobody can save a new route. Routes already saved keep working.</td></tr>

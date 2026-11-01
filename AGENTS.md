@@ -17,7 +17,9 @@ Edge Functions run on Deno, so `supabase` must stay in the `exclude` list in `ts
 
 ## Rules that keep the system working
 
-- The worker saves only rows that changed. Compare bikes, e-bikes, docks and the renting and returning flags. Never compare `last_reported`: it changes constantly and would make most stations look changed.
+- The worker saves only rows that changed. The `sync_divvy` database function compares bikes, e-bikes, docks and the renting and returning flags. Never compare `last_reported`: it changes constantly and would make most stations look changed.
+- The comparison stays in the database. Having the worker download all 2,078 rows each minute would use up the free plan's data allowance.
+- Only callers with the `worker_token` from Vault can start a run, because the worker's URL is public.
 - The worker records every run in `worker_runs`, including failed runs. If Divvy's response has an unexpected shape, the run fails instead of saving blanks.
 - The Supabase secret key stays on the server. It never goes in the code or in a `NEXT_PUBLIC_` variable.
 - Realtime needs three things for each table: added to the `supabase_realtime` publication, read access granted, and a row-level security policy. If one is missing, the page gets nothing and shows no error.
@@ -50,3 +52,8 @@ Stay on free plans and do not add payment methods. Supabase's free plan includes
 This is a class project and a one-shot build is marked incomplete. Work in small steps, commit often, and explain what each part does so the owner can explain it in class.
 
 Schema changes go in `supabase/migrations`. Apply them through the Supabase MCP server and keep the file in the repo.
+
+## Tests
+
+- `node --test supabase/tests/divvy-worker.test.ts` runs the worker's logic on a saved copy of Divvy's response in `supabase/tests/fixtures`, with a fake database.
+- `supabase/tests/sync_divvy.sql` checks what the database saves. Run it through the Supabase MCP server. It always ends with an exception that rolls back its changes, and success reads `ALL PASSED`.
