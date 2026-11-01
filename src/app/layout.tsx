@@ -13,7 +13,23 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      appearance={{
+        variables: {
+          colorPrimary: 'var(--bike)',
+          colorPrimaryForeground: 'var(--surface)',
+          colorBackground: 'var(--surface)',
+          colorForeground: 'var(--ink)',
+          colorMutedForeground: 'var(--muted)',
+          colorInput: 'var(--bg)',
+          colorInputForeground: 'var(--ink)',
+          colorNeutral: 'var(--ink)',
+          colorDanger: 'var(--bad)',
+          fontFamily: 'var(--font-archivo), "Helvetica Neue", Arial, sans-serif',
+          borderRadius: '0.5rem',
+        },
+      }}
+    >
       <html lang="en" className={`${archivo.variable} ${plexMono.variable}`}>
         <body className="min-h-dvh antialiased">{children}</body>
       </html>

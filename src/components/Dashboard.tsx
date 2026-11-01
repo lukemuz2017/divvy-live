@@ -1,13 +1,42 @@
 'use client';
 
-import { useAuth, UserButton } from '@clerk/nextjs';
+import { useAuth, UserButton, useUser } from '@clerk/nextjs';
 import { useEffect, useState } from 'react';
 import { routeEnds, useLatestRun, useNearbyStations, useNow, useSupabase } from '@/lib/live-data';
 import type { Route } from '@/lib/live-data';
-import { freshnessOf, MAX_WALK_MILES, rankDropoffs, rankPickups, stationsInRange } from '@/lib/scoring';
+import {
+  closestDropoffs,
+  closestPickups,
+  freshnessOf,
+  MAX_WALK_MILES,
+  rankDropoffs,
+  rankPickups,
+  stationsInRange,
+} from '@/lib/scoring';
 import { FreshnessBadge, FreshnessBanner, timeAgo } from './FreshnessBadge';
 import { RouteForm } from './RouteForm';
-import { StationOptions } from './StationOptions';
+import { RoutesPanel } from './RoutesPanel';
+import { TripPlan } from './TripPlan';
+
+// Used unless the person has uploaded their own photo.
+const DEFAULT_AVATAR_APPEARANCE = {
+  elements: {
+    userButtonAvatarBox: 'divvy-avatar',
+    userButtonAvatarImage: 'divvy-avatar-image',
+    userPreviewAvatarBox: 'divvy-avatar',
+    userPreviewAvatarImage: 'divvy-avatar-image',
+  },
+};
+
+function RoutesIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <circle cx="3.5" cy="3.5" r="2" />
+      <circle cx="12.5" cy="12.5" r="2" />
+      <path d="M5.5 3.5h5a2.5 2.5 0 0 1 0 5h-5a2.5 2.5 0 0 0 0 5h5" />
+    </svg>
+  );
+}
 
 function LoadingCards() {
   return (
@@ -39,13 +68,15 @@ export function Dashboard() {
 
 function LiveDashboard() {
   const supabase = useSupabase();
+  const { user } = useUser();
   const now = useNow(1000);
   const { run, loaded: runLoaded } = useLatestRun(supabase);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [routesLoaded, setRoutesLoaded] = useState(false);
   const [routesFailed, setRoutesFailed] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [showingAllRoutes, setShowingAllRoutes] = useState(false);
   const [reversed, setReversed] = useState(false);
 
   const activeRoute = routes.find((route) => route.is_active) ?? null;
@@ -66,7 +97,7 @@ function LiveDashboard() {
 
   const activate = async (routeId: string) => {
     setReversed(false);
-    setConfirmingDelete(false);
+    setConfirmingDeleteId(null);
     setRoutes((previous) => previous.map((route) => ({ ...route, is_active: route.id === routeId })));
     const { error } = await supabase.rpc('set_active_route', { route_id: routeId });
     if (error) await loadRoutes();
@@ -78,22 +109,34 @@ function LiveDashboard() {
     await activate(route.id);
   };
 
-  const deleteActive = async () => {
-    if (!activeRoute) return;
-    setConfirmingDelete(false);
-    await supabase.from('routes').delete().eq('id', activeRoute.id);
+  const deleteRoute = async (routeId: string) => {
+    setConfirmingDeleteId(null);
+    await supabase.from('routes').delete().eq('id', routeId);
     await loadRoutes();
   };
 
   const ends = activeRoute ? routeEnds(activeRoute) : null;
   const from = ends ? (reversed ? ends.end : ends.start) : null;
   const to = ends ? (reversed ? ends.start : ends.end) : null;
-  const pickups = from ? rankPickups(nearby.stations, nearby.statuses, from) : [];
-  const dropoffs = to ? rankDropoffs(nearby.stations, nearby.statuses, to) : [];
+  const pointPickups = from ? rankPickups(nearby.stations, nearby.statuses, from) : [];
+  const pointDropoffs = to ? rankDropoffs(nearby.stations, nearby.statuses, to) : [];
+  const walkPickups = from ? closestPickups(nearby.stations, nearby.statuses, from) : [];
+  const walkDropoffs = to ? closestDropoffs(nearby.stations, nearby.statuses, to) : [];
   const stationsNearFrom = from ? stationsInRange(nearby.stations, from).length : 0;
   const stationsNearTo = to ? stationsInRange(nearby.stations, to).length : 0;
-  const bestPickup = pickups[0];
-  const bestDropoff = dropoffs[0];
+  const tripsMatch =
+    pointPickups.length > 0 &&
+    pointDropoffs.length > 0 &&
+    pointPickups[0].station.station_id === walkPickups[0]?.station.station_id &&
+    pointDropoffs[0].station.station_id === walkDropoffs[0]?.station.station_id;
+  const pickupEmptyMessage =
+    stationsNearFrom === 0
+      ? `No Divvy stations within ${MAX_WALK_MILES} miles of this start.`
+      : `None of the ${stationsNearFrom} stations nearby has a bike right now. This page will update when one does.`;
+  const dropoffEmptyMessage =
+    stationsNearTo === 0
+      ? `No Divvy stations within ${MAX_WALK_MILES} miles of this destination.`
+      : `None of the ${stationsNearTo} stations nearby has an open dock right now. This page will update when one does.`;
   const showOptions = freshness === 'fresh';
   const lastChangedStation = nearby.stations.find((station) => station.station_id === nearby.lastChange?.stationId);
   const showForm = routesLoaded && !routesFailed && (adding || routes.length === 0);
@@ -105,7 +148,15 @@ function LiveDashboard() {
           <h1 className="text-xl font-bold tracking-tight">Divvy Live</h1>
           <FreshnessBadge freshness={freshness} run={run} now={now} />
         </div>
-        <UserButton />
+        <UserButton appearance={user?.hasImage ? undefined : DEFAULT_AVATAR_APPEARANCE}>
+          <UserButton.MenuItems>
+            <UserButton.Action
+              label="Saved routes"
+              labelIcon={<RoutesIcon />}
+              onClick={() => setShowingAllRoutes(true)}
+            />
+          </UserButton.MenuItems>
+        </UserButton>
       </header>
 
       {routesFailed && (
@@ -138,6 +189,18 @@ function LiveDashboard() {
         </nav>
       )}
 
+      {showingAllRoutes && routes.length > 0 && (
+        <RoutesPanel
+          routes={routes}
+          confirmingDeleteId={confirmingDeleteId}
+          onUse={(routeId) => void activate(routeId)}
+          onAskDelete={setConfirmingDeleteId}
+          onCancelDelete={() => setConfirmingDeleteId(null)}
+          onDelete={(routeId) => void deleteRoute(routeId)}
+          onClose={() => setShowingAllRoutes(false)}
+        />
+      )}
+
       {showForm && (
         <RouteForm isFirst={routes.length === 0} onSaved={(route) => void onSaved(route)} onCancel={() => setAdding(false)} />
       )}
@@ -152,6 +215,37 @@ function LiveDashboard() {
 
       {activeRoute && (
         <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-muted">
+              Right now on {activeRoute.name}
+              {reversed ? ', reversed' : ''}
+            </p>
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              {confirmingDeleteId === activeRoute.id && !showingAllRoutes ? (
+                <>
+                  <span>Delete {activeRoute.name}?</span>
+                  <button onClick={() => void deleteRoute(activeRoute.id)} className="cursor-pointer font-semibold text-bad underline">
+                    Delete route
+                  </button>
+                  <button onClick={() => setConfirmingDeleteId(null)} className="cursor-pointer text-muted underline">
+                    Keep it
+                  </button>
+                </>
+              ) : (
+                <button onClick={() => setConfirmingDeleteId(activeRoute.id)} className="cursor-pointer text-muted underline hover:text-ink">
+                  Delete this route
+                </button>
+              )}
+              <button
+                onClick={() => setReversed(!reversed)}
+                aria-pressed={reversed}
+                className="cursor-pointer rounded-md border border-line bg-surface px-3 py-1 font-semibold hover:border-bike"
+              >
+                Reverse direction
+              </button>
+            </div>
+          </div>
+
           <FreshnessBanner freshness={freshness} run={run} now={now} />
 
           {freshness === 'loading' || nearby.loading ? (
@@ -163,62 +257,25 @@ function LiveDashboard() {
             </section>
           ) : showOptions ? (
             <>
-              <section className="grid gap-4 rounded-lg border border-line bg-surface p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-sm font-semibold text-muted">
-                    Best trip right now on {activeRoute.name}
-                    {reversed ? ', reversed' : ''}
-                  </h2>
-                  <button
-                    onClick={() => setReversed(!reversed)}
-                    aria-pressed={reversed}
-                    className="cursor-pointer rounded-md border border-line px-3 py-1 text-sm font-semibold hover:border-bike"
-                  >
-                    Reverse direction
-                  </button>
-                </div>
-                {bestPickup && bestDropoff ? (
-                  <div className="flex flex-wrap items-end justify-between gap-4">
-                    <div className="grid min-w-0 gap-1 text-xl font-bold text-balance md:text-2xl">
-                      <p>
-                        <span className="font-normal text-muted">From </span>
-                        {bestPickup.station.name}
-                      </p>
-                      <p>
-                        <span className="font-normal text-muted">to </span>
-                        {bestDropoff.station.name}
-                      </p>
-                    </div>
-                    <p className="font-mono text-3xl font-medium text-bike md:text-4xl">
-                      +{bestPickup.points + bestDropoff.points}
-                      <span className="ml-1 text-base">pts</span>
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-muted">We can’t recommend a full trip right now. See what’s available below.</p>
-                )}
-              </section>
-
-              <div className="grid gap-6 md:grid-cols-2">
-                <StationOptions
-                  title="Pick up"
-                  options={pickups}
+              <div className="grid gap-8 md:grid-cols-2 md:gap-6">
+                <TripPlan
+                  title="Shortest walk"
+                  description="The closest stations with a bike to take and a dock to return it to."
+                  pickups={walkPickups}
+                  dropoffs={walkDropoffs}
                   changeCounts={nearby.changeCounts}
-                  emptyMessage={
-                    stationsNearFrom === 0
-                      ? `No Divvy stations within ${MAX_WALK_MILES} miles of this start.`
-                      : `None of the ${stationsNearFrom} stations nearby has a bike right now. This page will update when one does.`
-                  }
+                  pickupEmptyMessage={pickupEmptyMessage}
+                  dropoffEmptyMessage={dropoffEmptyMessage}
                 />
-                <StationOptions
-                  title="Drop off"
-                  options={dropoffs}
+                <TripPlan
+                  title="Most points"
+                  description="The stations that need the most help, within a half-mile walk of each end."
+                  pickups={pointPickups}
+                  dropoffs={pointDropoffs}
                   changeCounts={nearby.changeCounts}
-                  emptyMessage={
-                    stationsNearTo === 0
-                      ? `No Divvy stations within ${MAX_WALK_MILES} miles of this destination.`
-                      : `None of the ${stationsNearTo} stations nearby has an open dock right now. This page will update when one does.`
-                  }
+                  note={tripsMatch ? 'This is the same trip as the shortest walk right now.' : undefined}
+                  pickupEmptyMessage={pickupEmptyMessage}
+                  dropoffEmptyMessage={dropoffEmptyMessage}
                 />
               </div>
 
@@ -230,24 +287,6 @@ function LiveDashboard() {
               </p>
             </>
           ) : null}
-
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            {confirmingDelete ? (
-              <>
-                <span>Delete {activeRoute.name}?</span>
-                <button onClick={() => void deleteActive()} className="cursor-pointer font-semibold text-bad underline">
-                  Delete route
-                </button>
-                <button onClick={() => setConfirmingDelete(false)} className="cursor-pointer text-muted underline">
-                  Keep it
-                </button>
-              </>
-            ) : (
-              <button onClick={() => setConfirmingDelete(true)} className="cursor-pointer text-muted underline hover:text-ink">
-                Delete this route
-              </button>
-            )}
-          </div>
         </>
       )}
     </>

@@ -66,9 +66,13 @@ export function boundsAround(point: Point) {
   };
 }
 
+// Public racks hold only a bike or two and appear to take e-bikes only, so nearly any bike would "fill"
+// or "empty" one. Counting them would crowd real docked stations out of the rankings.
+export const isPublicRack = (station: Station) => /^public rack/i.test(station.name.trim());
+
 export function stationsInRange(stations: Station[], point: Point): Station[] {
   return stations
-    .filter((station) => milesBetween(point, station) <= MAX_WALK_MILES)
+    .filter((station) => !isPublicRack(station) && milesBetween(point, station) <= MAX_WALK_MILES)
     .sort((a, b) => milesBetween(point, a) - milesBetween(point, b));
 }
 
@@ -83,7 +87,7 @@ export function dropoffPoints(status: StationStatus): number {
   return usable === 0 ? 0 : Math.round((10 * status.docks) / usable);
 }
 
-function rank(
+function usableOptions(
   stations: Station[],
   statuses: Map<string, StationStatus>,
   point: Point,
@@ -103,16 +107,37 @@ function rank(
       walkMinutes: Math.max(1, Math.round(miles * WALK_MINUTES_PER_MILE)),
     });
   }
-  // Most points first, and the shorter walk wins a tie.
-  return options.sort((a, b) => b.points - a.points || a.miles - b.miles).slice(0, TOP_OPTIONS);
+  return options;
 }
 
+// Most points first, and the shorter walk wins a tie.
+const mostPoints = (options: Recommendation[]) =>
+  [...options].sort((a, b) => b.points - a.points || a.miles - b.miles).slice(0, TOP_OPTIONS);
+
+// Shortest walk first, and more points win a tie.
+const shortestWalk = (options: Recommendation[]) =>
+  [...options].sort((a, b) => a.miles - b.miles || b.points - a.points).slice(0, TOP_OPTIONS);
+
+const pickupOptions = (stations: Station[], statuses: Map<string, StationStatus>, point: Point) =>
+  usableOptions(stations, statuses, point, (s) => s.is_renting && s.bikes >= 1, pickupPoints);
+
+const dropoffOptions = (stations: Station[], statuses: Map<string, StationStatus>, point: Point) =>
+  usableOptions(stations, statuses, point, (s) => s.is_returning && s.docks >= 1, dropoffPoints);
+
 export function rankPickups(stations: Station[], statuses: Map<string, StationStatus>, point: Point) {
-  return rank(stations, statuses, point, (s) => s.is_renting && s.bikes >= 1, pickupPoints);
+  return mostPoints(pickupOptions(stations, statuses, point));
 }
 
 export function rankDropoffs(stations: Station[], statuses: Map<string, StationStatus>, point: Point) {
-  return rank(stations, statuses, point, (s) => s.is_returning && s.docks >= 1, dropoffPoints);
+  return mostPoints(dropoffOptions(stations, statuses, point));
+}
+
+export function closestPickups(stations: Station[], statuses: Map<string, StationStatus>, point: Point) {
+  return shortestWalk(pickupOptions(stations, statuses, point));
+}
+
+export function closestDropoffs(stations: Station[], statuses: Map<string, StationStatus>, point: Point) {
+  return shortestWalk(dropoffOptions(stations, statuses, point));
 }
 
 // Uses the browser's clock, because a stopped worker sends nothing that could announce it has stopped.

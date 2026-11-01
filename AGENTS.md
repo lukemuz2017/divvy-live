@@ -33,7 +33,8 @@ Edge Functions run on Deno, so `supabase` must stay in the `exclude` list in `ts
 - Pick-up points: `10 × bikes ÷ (bikes + docks)`. The station must be renting and have at least 1 bike.
 - Drop-off points: `10 × docks ÷ (bikes + docks)`. The station must be accepting returns and have at least 1 dock.
 - Do not divide by capacity. It is unreliable because of broken docks.
-- Show the top three of each. Ties go to the shorter walk.
+- The page has two sections, each with its own trip and top three pick-ups and drop-offs.
+- Shortest walk ranks by distance, and ties go to more points. Most points ranks by points, and ties go to the shorter walk.
 
 ## Page states
 
@@ -57,3 +58,13 @@ Schema changes go in `supabase/migrations`. Apply them through the Supabase MCP 
 
 - `node --test supabase/tests/divvy-worker.test.ts` runs the worker's logic on a saved copy of Divvy's response in `supabase/tests/fixtures`, with a fake database.
 - `supabase/tests/sync_divvy.sql` checks what the database saves. Run it through the Supabase MCP server. It always ends with an exception that rolls back its changes, and success reads `ALL PASSED`.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   boundsAround,
+  closestDropoffs,
+  closestPickups,
   dropoffPoints,
   freshnessOf,
   milesBetween,
@@ -82,6 +84,32 @@ test('stations you cannot use are left out', () => {
 
   assert.deepEqual(rankPickups(stations, statuses, home).map((o) => o.station.station_id), ['full', 'no-returns']);
   assert.deepEqual(rankDropoffs(stations, statuses, home).map((o) => o.station.station_id), ['empty', 'closed']);
+});
+
+test('the shortest walk section ranks by distance, even when a farther station earns more points', () => {
+  const stations = [station('far-full', 0.005), station('near-half', 0.001)];
+  const statuses = statusMap(status('far-full', 10, 0), status('near-half', 5, 5));
+
+  assert.equal(closestPickups(stations, statuses, home)[0].station.station_id, 'near-half');
+  assert.equal(rankPickups(stations, statuses, home)[0].station.station_id, 'far-full');
+});
+
+test('the shortest walk section leaves out stations you cannot use', () => {
+  const stations = [station('near-empty', 0.001), station('near-full', 0.002), station('farther', 0.003)];
+  const statuses = statusMap(status('near-empty', 0, 10), status('near-full', 10, 0), status('farther', 5, 5));
+
+  assert.deepEqual(closestPickups(stations, statuses, home).map((o) => o.station.station_id), ['near-full', 'farther']);
+  assert.deepEqual(closestDropoffs(stations, statuses, home).map((o) => o.station.station_id), ['near-empty', 'farther']);
+});
+
+test('public racks are left out of every recommendation', () => {
+  const rack = { ...station('rack', 0.001), name: 'Public Rack - Wacker Dr & Madison St (East)' };
+  const dock = station('dock', 0.002);
+  const statuses = statusMap(status('rack', 0, 4), status('dock', 5, 5));
+
+  assert.deepEqual(rankDropoffs([rack, dock], statuses, home).map((o) => o.station.station_id), ['dock']);
+  assert.deepEqual(closestDropoffs([rack, dock], statuses, home).map((o) => o.station.station_id), ['dock']);
+  assert.deepEqual(rankPickups([rack, dock], statuses, home).map((o) => o.station.station_id), ['dock']);
 });
 
 test('only the top three options are shown', () => {

@@ -21,7 +21,7 @@ export function StationOptions({
 }) {
   return (
     <section className="grid content-start gap-3">
-      <h2 className="text-lg font-bold">{title}</h2>
+      <h3 className="font-bold">{title}</h3>
       {options.length === 0 ? (
         <p className="rounded-lg border border-dashed border-line p-4 text-sm text-muted">{emptyMessage}</p>
       ) : (
