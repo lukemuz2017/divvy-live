@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  balanceScore,
   boundsAround,
   closestDropoffs,
   closestPickups,
@@ -14,6 +15,8 @@ import {
   pickupPoints,
   rankDropoffs,
   rankPickups,
+  recommendedDropoff,
+  recommendedPickup,
   sharedStationIds,
   STALE_AFTER_MS,
 } from './scoring.ts';
@@ -120,6 +123,70 @@ test('distances read in tenths of a mile, and never as zero', () => {
   assert.equal(formatMiles(0.42), '0.4 mi');
   assert.equal(formatMiles(0.01), '0.1 mi');
   assert.equal(formatMiles(1.26), '1.3 mi');
+});
+
+const option = (points: number, miles: number) => ({
+  station: station('a', 0),
+  status: status('a', 1, 1),
+  points,
+  miles,
+  walkMinutes: 1,
+});
+
+test('the balance score weighs points and walking equally', () => {
+  assert.equal(balanceScore(option(10, 0)), 1, 'most points with no walk is a perfect score');
+  assert.equal(balanceScore(option(0, 0.5)), 0, 'no points at the walking limit is the lowest score');
+  assert.equal(balanceScore(option(10, 0.5)), 0.5);
+  assert.equal(balanceScore(option(0, 0)), 0.5);
+});
+
+test('the recommended pick-up can beat both the closest and the fullest station', () => {
+  const stations = [station('closest-empty', 0.0005), station('middle', 0.002), station('fullest-far', 0.007)];
+  const statuses = statusMap(status('closest-empty', 1, 9), status('middle', 8, 2), status('fullest-far', 10, 0));
+
+  assert.equal(recommendedPickup(stations, statuses, home)?.station.station_id, 'middle');
+  assert.equal(closestPickups(stations, statuses, home)[0].station.station_id, 'closest-empty');
+  assert.equal(rankPickups(stations, statuses, home)[0].station.station_id, 'fullest-far');
+});
+
+test('the recommended drop-off follows the same rule, using open docks', () => {
+  const stations = [station('closest-full', 0.0005), station('middle', 0.002), station('emptiest-far', 0.007)];
+  const statuses = statusMap(status('closest-full', 9, 1), status('middle', 2, 8), status('emptiest-far', 0, 10));
+
+  assert.equal(recommendedDropoff(stations, statuses, home)?.station.station_id, 'middle');
+});
+
+test('the recommendation can come from outside both top threes', () => {
+  const stations = [
+    station('near-1', 0.0002),
+    station('near-2', 0.0003),
+    station('near-3', 0.0004),
+    station('balanced', 0.0015),
+    station('full-1', 0.0065),
+    station('full-2', 0.0066),
+    station('full-3', 0.0067),
+  ];
+  const statuses = statusMap(
+    status('near-1', 1, 9),
+    status('near-2', 1, 9),
+    status('near-3', 1, 9),
+    status('balanced', 8, 2),
+    status('full-1', 10, 0),
+    status('full-2', 10, 0),
+    status('full-3', 10, 0),
+  );
+
+  assert.equal(recommendedPickup(stations, statuses, home)?.station.station_id, 'balanced');
+  assert.ok(!closestPickups(stations, statuses, home).some((o) => o.station.station_id === 'balanced'));
+  assert.ok(!rankPickups(stations, statuses, home).some((o) => o.station.station_id === 'balanced'));
+});
+
+test('there is no recommendation when no station can be used', () => {
+  const stations = [station('closed', 0.001)];
+  const statuses = statusMap(status('closed', 5, 5, { is_renting: false, is_returning: false }));
+
+  assert.equal(recommendedPickup(stations, statuses, home), null);
+  assert.equal(recommendedDropoff(stations, statuses, home), null);
 });
 
 test('best of both finds stations in both top threes', () => {

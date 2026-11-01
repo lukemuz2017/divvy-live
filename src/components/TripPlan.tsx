@@ -3,6 +3,39 @@ import type { Recommendation } from '@/lib/scoring';
 import { StationOptions } from './StationOptions';
 import type { Measure } from './StationOptions';
 
+export function RecommendedTrip({ pickup, dropoff }: { pickup: Recommendation; dropoff: Recommendation }) {
+  return (
+    <section className="grid gap-4 rounded-lg border-2 border-bike bg-surface p-5">
+      <div className="grid gap-1">
+        <h2 className="text-2xl font-bold">Recommended trip</h2>
+        <p className="text-sm text-muted">The best balance of helping rebalance bikes and keeping your walk short, right now.</p>
+      </div>
+      <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+        <div className="grid min-w-0 gap-1 text-lg font-semibold text-balance">
+          <p>
+            <span className="font-normal text-muted">From </span>
+            {pickup.station.name}
+          </p>
+          <p>
+            <span className="font-normal text-muted">to </span>
+            {dropoff.station.name}
+          </p>
+        </div>
+        <dl className="flex gap-8">
+          <div className="grid gap-0.5">
+            <dt className="text-xs text-muted">Points</dt>
+            <dd className="font-mono text-3xl font-medium text-bike">+{pickup.points + dropoff.points}</dd>
+          </div>
+          <div className="grid gap-0.5">
+            <dt className="text-xs text-muted">Total walking</dt>
+            <dd className="font-mono text-3xl font-medium">{formatMiles(pickup.miles + dropoff.miles)}</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+  );
+}
+
 export function TripPlan({
   title,
   description,

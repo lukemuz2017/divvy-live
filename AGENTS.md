@@ -33,7 +33,9 @@ Edge Functions run on Deno, so `supabase` must stay in the `exclude` list in `ts
 - Pick-up points: `10 × bikes ÷ (bikes + docks)`. The station must be renting and have at least 1 bike.
 - Drop-off points: `10 × docks ÷ (bikes + docks)`. The station must be accepting returns and have at least 1 dock.
 - Do not divide by capacity. It is unreliable because of broken docks.
-- The page has two sections, each with its own trip and top three pick-ups and drop-offs.
+- The recommended trip at the top uses an internal balance score for each station: `0.5 × (points ÷ 10) + 0.5 × (1 − miles ÷ 0.5)`. It picks the best-scoring pick-up and drop-off from every usable station in range, and ties go to the shorter walk.
+- Below it, the page has two sections, each with its own trip and top three pick-ups and drop-offs.
+- Public racks are left out of all recommendations.
 - Shortest walk ranks by distance, and ties go to more points. Most points ranks by points, and ties go to the shorter walk.
 
 ## Page states

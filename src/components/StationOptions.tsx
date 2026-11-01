@@ -46,7 +46,10 @@ function StationOption({
             <span className="mr-2 font-mono text-sm font-normal text-muted">{rank}</span>
             {option.station.name}
             {bestOfBoth && (
-              <span className="ml-2 inline-block rounded-full bg-bike-soft px-2 py-0.5 align-middle font-mono text-xs font-medium text-bike">
+              <span
+                title="In the top three for both walking distance and points"
+                className="ml-2 inline-block rounded-full bg-bike-soft px-2 py-0.5 align-middle font-mono text-xs font-medium text-bike"
+              >
                 Best of both
               </span>
             )}

@@ -11,13 +11,15 @@ import {
   MAX_WALK_MILES,
   rankDropoffs,
   rankPickups,
+  recommendedDropoff,
+  recommendedPickup,
   sharedStationIds,
   stationsInRange,
 } from '@/lib/scoring';
 import { FreshnessBadge, FreshnessBanner, timeAgo } from './FreshnessBadge';
 import { RouteForm } from './RouteForm';
 import { RoutesPanel } from './RoutesPanel';
-import { TripPlan } from './TripPlan';
+import { RecommendedTrip, TripPlan } from './TripPlan';
 
 // Used unless the person has uploaded their own photo.
 const DEFAULT_AVATAR_APPEARANCE = {
@@ -123,6 +125,8 @@ function LiveDashboard() {
   const pointDropoffs = to ? rankDropoffs(nearby.stations, nearby.statuses, to) : [];
   const walkPickups = from ? closestPickups(nearby.stations, nearby.statuses, from) : [];
   const walkDropoffs = to ? closestDropoffs(nearby.stations, nearby.statuses, to) : [];
+  const bestPickup = from ? recommendedPickup(nearby.stations, nearby.statuses, from) : null;
+  const bestDropoff = to ? recommendedDropoff(nearby.stations, nearby.statuses, to) : null;
   const pickupsInBoth = sharedStationIds(pointPickups, walkPickups);
   const dropoffsInBoth = sharedStationIds(pointDropoffs, walkDropoffs);
   const stationsNearFrom = from ? stationsInRange(nearby.stations, from).length : 0;
@@ -260,14 +264,7 @@ function LiveDashboard() {
             </section>
           ) : showOptions ? (
             <>
-              {(pickupsInBoth.size > 0 || dropoffsInBoth.size > 0) && (
-                <p className="text-sm text-muted">
-                  <span className="mr-2 inline-block rounded-full bg-bike-soft px-2 py-0.5 font-mono text-xs font-medium text-bike">
-                    Best of both
-                  </span>
-                  In the top three for both walking distance and points.
-                </p>
-              )}
+              {bestPickup && bestDropoff && <RecommendedTrip pickup={bestPickup} dropoff={bestDropoff} />}
 
               <div className="grid gap-8 md:grid-cols-2 md:gap-6">
                 <TripPlan
