@@ -115,3 +115,9 @@ body {
     animation: none;
   }
 }
+
+/* The add-route pop-up blurs and dims the page behind it. */
+.route-dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+  backdrop-filter: blur(6px);
+}

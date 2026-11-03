@@ -19,15 +19,10 @@ import {
 } from '@/lib/scoring';
 import type { Priority, Recommendation } from '@/lib/scoring';
 import { FreshnessBadge, FreshnessBanner, timeAgo } from './FreshnessBadge';
-import { RouteForm } from './RouteForm';
+import { RouteForm, RouteFormDialog } from './RouteForm';
 import { SiteHeader } from './SiteHeader';
 import { RecommendedTrip, TripPlan } from './TripPlan';
 
-const PRIORITIES: { value: Priority; label: string }[] = [
-  { value: 'walk', label: 'Walking' },
-  { value: 'balanced', label: 'Balanced' },
-  { value: 'points', label: 'Points' },
-];
 
 type TripNotice = { kind: 'saved'; tripId: string; points: number } | { kind: 'error'; message: string } | { kind: 'removed' };
 
@@ -104,14 +99,6 @@ function LiveDashboard() {
     await activate(route.id);
   };
 
-  const setPriority = async (value: Priority) => {
-    if (!activeRoute) return;
-    const column = reversed ? 'reverse_priority' : 'forward_priority';
-    setRoutes((previous) => previous.map((route) => (route.id === activeRoute.id ? { ...route, [column]: value } : route)));
-    const { error } = await supabase.from('routes').update({ [column]: value, updated_at: new Date().toISOString() }).eq('id', activeRoute.id);
-    if (error) await loadRoutes();
-  };
-
   // The database works out the points, so what's saved can differ slightly if a bike just moved.
   const chooseTrip = async (pickup: Recommendation, dropoff: Recommendation) => {
     if (!activeRoute) return;
@@ -169,7 +156,7 @@ function LiveDashboard() {
   // A delayed check still means the data is under 3 minutes old, so recommendations stay up.
   const showOptions = freshness === 'fresh' || freshness === 'delayed';
   const lastChangedStation = nearby.stations.find((station) => station.station_id === nearby.lastChange?.stationId);
-  const showForm = routesLoaded && !routesFailed && (adding || routes.length === 0);
+  const showFirstRouteForm = routesLoaded && !routesFailed && routes.length === 0;
 
   return (
     <>
@@ -207,8 +194,9 @@ function LiveDashboard() {
         </nav>
       )}
 
-      {showForm && (
-        <RouteForm isFirst={routes.length === 0} onSaved={(route) => void onSaved(route)} onCancel={() => setAdding(false)} />
+      {showFirstRouteForm && <RouteForm isFirst onSaved={(route) => void onSaved(route)} onCancel={() => setAdding(false)} />}
+      {adding && routes.length > 0 && (
+        <RouteFormDialog onSaved={(route) => void onSaved(route)} onCancel={() => setAdding(false)} />
       )}
 
       {routesLoaded && routes.length > 0 && !activeRoute && !adding && (
@@ -221,22 +209,7 @@ function LiveDashboard() {
 
       {activeRoute && (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div role="group" aria-label="What to prioritize in this direction" className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="font-semibold text-muted">Prioritize in this direction</span>
-              <div className="flex overflow-hidden rounded-md border border-line bg-surface">
-                {PRIORITIES.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => void setPriority(option.value)}
-                    aria-pressed={priority === option.value}
-                    className={`cursor-pointer px-3 py-1 font-semibold ${priority === option.value ? 'bg-bike text-surface' : 'text-muted hover:text-ink'}`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <div className="flex flex-wrap items-center justify-end gap-3">
             <div className="flex flex-wrap items-center gap-3 text-sm">
               {confirmingDelete ? (
                 <>
@@ -322,7 +295,6 @@ function LiveDashboard() {
                 {listView === 'walk' ? (
                 <TripPlan
                   title="Shortest walk"
-                  description="The closest stations with a bike to take and a dock to return it to."
                   measure="miles"
                   pickups={walkPickups}
                   dropoffs={walkDropoffs}
@@ -337,7 +309,6 @@ function LiveDashboard() {
                 ) : (
                 <TripPlan
                   title="Most points"
-                  description="The stations that need the most help, within a half-mile walk of each end."
                   measure="points"
                   pickups={pointPickups}
                   dropoffs={pointDropoffs}

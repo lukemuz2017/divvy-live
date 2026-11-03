@@ -1,7 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Route } from '@/lib/live-data';
+import type { Priority } from '@/lib/scoring';
+
+const PRIORITIES: { value: Priority; label: string }[] = [
+  { value: 'walk', label: 'Shortest walk' },
+  { value: 'balanced', label: 'Balanced' },
+  { value: 'points', label: 'Most points' },
+];
+
+function PriorityPicker({ legend, value, onChange }: { legend: string; value: Priority; onChange: (value: Priority) => void }) {
+  return (
+    <fieldset className="grid gap-1">
+      <legend className="mb-1 text-sm font-semibold">{legend}</legend>
+      <div className="flex w-fit overflow-hidden rounded-md border border-line text-sm">
+        {PRIORITIES.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            aria-pressed={value === option.value}
+            className={`cursor-pointer px-3 py-1.5 font-semibold ${value === option.value ? 'bg-bike text-surface' : 'bg-bg text-muted hover:text-ink'}`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
 
 type FieldName = 'name' | 'start' | 'end';
 
@@ -21,6 +49,8 @@ export function RouteForm({
   onCancel: () => void;
 }) {
   const [values, setValues] = useState<Record<FieldName, string>>({ name: '', start: '', end: '' });
+  const [forwardPriority, setForwardPriority] = useState<Priority>('balanced');
+  const [reversePriority, setReversePriority] = useState<Priority>('balanced');
   const [error, setError] = useState<{ message: string; field?: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -32,7 +62,7 @@ export function RouteForm({
       const response = await fetch('/api/routes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ ...values, forwardPriority, reversePriority }),
       });
       const body = await response.json();
       if (!response.ok) {
@@ -76,6 +106,10 @@ export function RouteForm({
           </div>
         ))}
       </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <PriorityPicker legend="Start to end: what matters most?" value={forwardPriority} onChange={setForwardPriority} />
+        <PriorityPicker legend="End to start: what matters most?" value={reversePriority} onChange={setReversePriority} />
+      </div>
       {error && (
         <p id="route-form-error" role="alert" className="text-sm text-bad">
           {error.message}
@@ -96,5 +130,29 @@ export function RouteForm({
         )}
       </div>
     </form>
+  );
+}
+
+// Opens the form over the page. The browser's own dialog handles Escape and keeps keyboard focus inside it.
+export function RouteFormDialog({ onSaved, onCancel }: { onSaved: (route: Route) => void; onCancel: () => void }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog && !dialog.open) dialog.showModal();
+  }, []);
+
+  return (
+    <dialog
+      ref={dialogRef}
+      onClose={onCancel}
+      onClick={(event) => {
+        if (event.target === dialogRef.current) dialogRef.current?.close();
+      }}
+      aria-label="Add a route"
+      className="route-dialog m-auto w-[min(42rem,calc(100%-2rem))] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-lg bg-transparent p-0 text-ink"
+    >
+      <RouteForm isFirst={false} onSaved={onSaved} onCancel={() => dialogRef.current?.close()} />
+    </dialog>
   );
 }

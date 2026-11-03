@@ -69,7 +69,6 @@ export function RecommendedTrip({
 
 export function TripPlan({
   title,
-  description,
   measure,
   pickups,
   dropoffs,
@@ -83,7 +82,6 @@ export function TripPlan({
   onChoose,
 }: {
   title: string;
-  description: string;
   measure: Measure;
   pickups: Recommendation[];
   dropoffs: Recommendation[];
@@ -115,10 +113,7 @@ export function TripPlan({
   return (
     <section className="grid content-start gap-5">
       <div className="grid gap-4 rounded-lg border border-line bg-surface p-5">
-        <div className="grid gap-1">
-          <h2 className="text-xl font-bold">{title}</h2>
-          <p className="text-sm text-muted">{description}</p>
-        </div>
+        <h2 className="sr-only">{title}</h2>
         {pickup && dropoff ? (
           <>
             <div className="grid gap-1 font-semibold text-balance">

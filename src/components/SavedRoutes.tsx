@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { routeEnds, useSupabase } from '@/lib/live-data';
 import type { Route } from '@/lib/live-data';
 import { milesBetween } from '@/lib/scoring';
-import { RouteForm } from './RouteForm';
+import { RouteForm, RouteFormDialog } from './RouteForm';
 import { SiteHeader } from './SiteHeader';
 
 const MAX_NAME_LENGTH = 40;
@@ -176,13 +176,20 @@ function RouteManager() {
         </ul>
       )}
 
-      {adding || routes.length === 0 ? (
-        <RouteForm
-          isFirst={routes.length === 0}
+      {adding && routes.length > 0 && (
+        <RouteFormDialog
           onSaved={() => {
             setAdding(false);
             void loadRoutes();
           }}
+          onCancel={() => setAdding(false)}
+        />
+      )}
+
+      {routes.length === 0 ? (
+        <RouteForm
+          isFirst
+          onSaved={() => void loadRoutes()}
           onCancel={() => setAdding(false)}
         />
       ) : (

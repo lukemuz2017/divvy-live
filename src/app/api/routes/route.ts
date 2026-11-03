@@ -20,6 +20,9 @@ export async function POST(request: Request) {
   const name = typeof body?.name === 'string' ? body.name.trim() : '';
   const start = typeof body?.start === 'string' ? body.start.trim() : '';
   const end = typeof body?.end === 'string' ? body.end.trim() : '';
+  const toPriority = (value: unknown) => (value === 'walk' || value === 'points' ? value : 'balanced');
+  const forwardPriority = toPriority(body?.forwardPriority);
+  const reversePriority = toPriority(body?.reversePriority);
 
   if (!name || name.length > MAX_NAME_LENGTH) return errorResponse(400, `Enter a name of up to ${MAX_NAME_LENGTH} characters.`, 'name');
   if (!start || start.length > MAX_ADDRESS_LENGTH) return errorResponse(400, 'Enter a start address.', 'start');
@@ -64,6 +67,8 @@ export async function POST(request: Request) {
       start_lon: startPoint.lon,
       end_lat: endPoint.lat,
       end_lon: endPoint.lon,
+      forward_priority: forwardPriority,
+      reverse_priority: reversePriority,
     })
     .select()
     .single();
