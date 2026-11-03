@@ -133,12 +133,15 @@ body {
   animation: map-walk 1s linear infinite;
 }
 
-.block-map circle {
-  transition: fill-opacity 0.7s;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .map-walk {
     animation: none;
+  }
+}
+
+/* OpenStreetMap tiles only come in a light style, so dark mode inverts them to match the site. */
+@media (prefers-color-scheme: dark) {
+  .trip-map .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.85);
   }
 }

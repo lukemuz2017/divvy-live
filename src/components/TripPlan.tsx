@@ -1,6 +1,7 @@
 import { formatMiles } from '@/lib/scoring';
-import type { Priority, Recommendation } from '@/lib/scoring';
+import type { Point, Priority, Recommendation } from '@/lib/scoring';
 import { StationOptions } from './StationOptions';
+import { TripMap } from './TripMap';
 import type { Measure } from './StationOptions';
 
 const RECOMMENDED_DESCRIPTION: Record<Priority, string> = {
@@ -24,32 +25,26 @@ function ChooseTripButton({ busy, onClick }: { busy: boolean; onClick: () => voi
 export function RecommendedTrip({
   pickup,
   dropoff,
+  start,
+  end,
   priority,
   choosing,
   onChoose,
 }: {
   pickup: Recommendation;
   dropoff: Recommendation;
+  start: Point;
+  end: Point;
   priority: Priority;
   choosing: boolean;
   onChoose: (pickup: Recommendation, dropoff: Recommendation) => void;
 }) {
   return (
-    <section className="grid gap-4 rounded-lg border-2 border-bike bg-surface p-5">
-      <div className="grid gap-1">
-        <h2 className="text-2xl font-bold">Recommended trip</h2>
-        <p className="text-sm text-muted">{RECOMMENDED_DESCRIPTION[priority]}</p>
-      </div>
-      <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
-        <div className="grid min-w-0 gap-1 text-lg font-semibold text-balance">
-          <p>
-            <span className="font-normal text-muted">From </span>
-            {pickup.station.name}
-          </p>
-          <p>
-            <span className="font-normal text-muted">to </span>
-            {dropoff.station.name}
-          </p>
+    <section className="grid gap-5 rounded-lg border-2 border-bike bg-surface p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
+      <div className="grid content-start gap-4">
+        <div className="grid gap-1">
+          <h2 className="text-2xl font-bold">Recommended trip</h2>
+          <p className="text-sm text-muted">{RECOMMENDED_DESCRIPTION[priority]}</p>
         </div>
         <dl className="flex gap-8">
           <div className="grid gap-0.5">
@@ -61,8 +56,26 @@ export function RecommendedTrip({
             <dd className="font-mono text-3xl font-medium">{formatMiles(pickup.miles + dropoff.miles)}</dd>
           </div>
         </dl>
+        <div className="grid min-w-0 gap-1 text-lg font-semibold text-balance">
+          <p>
+            <span className="font-normal text-muted">From </span>
+            {pickup.station.name}
+          </p>
+          <p>
+            <span className="font-normal text-muted">to </span>
+            {dropoff.station.name}
+          </p>
+        </div>
+        <ChooseTripButton busy={choosing} onClick={() => onChoose(pickup, dropoff)} />
       </div>
-      <ChooseTripButton busy={choosing} onClick={() => onChoose(pickup, dropoff)} />
+      <TripMap
+        start={start}
+        pickup={pickup.station}
+        dropoff={dropoff.station}
+        end={end}
+        pickupName={pickup.station.name.trim()}
+        dropoffName={dropoff.station.name.trim()}
+      />
     </section>
   );
 }

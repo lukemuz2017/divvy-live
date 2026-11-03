@@ -81,3 +81,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Map
+
+- The recommended trip card shows a small Leaflet map of the whole trip: walk, ride, walk. Lines are straight, not street directions.
+- Tiles come from OpenStreetMap, which needs no key but requires the credit line and light use. CARTO's basemaps now need an API key, so don't switch to them.
