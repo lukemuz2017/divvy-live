@@ -16,7 +16,7 @@ import {
   stationsInRange,
 } from '@/lib/scoring';
 import type { Priority, Recommendation } from '@/lib/scoring';
-import { FreshnessBadge, FreshnessBanner, timeAgo } from './FreshnessBadge';
+import { FreshnessBadge, FreshnessBanner } from './FreshnessBadge';
 import { RouteForm, RouteFormDialog } from './RouteForm';
 import { SiteHeader } from './SiteHeader';
 import { StationOptions } from './StationOptions';
@@ -169,7 +169,6 @@ function LiveDashboard() {
     wasCurrentRef.current = current;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [freshness]);
-  const lastChangedStation = nearby.stations.find((station) => station.station_id === nearby.lastChange?.stationId);
   const showFirstRouteForm = routesLoaded && !routesFailed && routes.length === 0;
 
   return (
@@ -301,12 +300,6 @@ function LiveDashboard() {
                 />
               </div>
 
-              <p className="font-mono text-xs text-muted" role="status">
-                Watching {nearby.stations.length} {nearby.stations.length === 1 ? 'station' : 'stations'} on this route.{' '}
-                {lastChangedStation && nearby.lastChange
-                  ? `Last change: ${lastChangedStation.name.trim()}, ${timeAgo(nearby.lastChange.at, now)}.`
-                  : 'Changes will appear here as bikes move.'}
-              </p>
             </>
           ) : null}
         </>
