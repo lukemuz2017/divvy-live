@@ -1,7 +1,6 @@
 'use client';
 
 import { useAuth } from '@clerk/nextjs';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { routeEnds, useLatestRun, useNearbyStations, useNow, useSupabase } from '@/lib/live-data';
 import type { Route } from '@/lib/live-data';
@@ -24,7 +23,10 @@ import { SiteHeader } from './SiteHeader';
 import { RecommendedTrip, TripPlan } from './TripPlan';
 
 
-type TripNotice = { kind: 'saved'; tripId: string; points: number } | { kind: 'error'; message: string } | { kind: 'removed' };
+type TripNotice = { kind: 'saved'; points: number; pickupName: string; dropoffName: string } | { kind: 'error'; message: string };
+
+// How long the trip-saved pop-up stays before it fades.
+const SAVED_TOAST_MS = 4000;
 
 function LoadingCards() {
   return (
@@ -66,6 +68,13 @@ function LiveDashboard() {
   const [reversed, setReversed] = useState(false);
   const [choosing, setChoosing] = useState(false);
   const [tripNotice, setTripNotice] = useState<TripNotice | null>(null);
+
+  // The saved pop-up clears itself. Errors stay until the next action so they aren't missed.
+  useEffect(() => {
+    if (tripNotice?.kind !== 'saved') return;
+    const timer = setTimeout(() => setTripNotice(null), SAVED_TOAST_MS);
+    return () => clearTimeout(timer);
+  }, [tripNotice]);
   const [listView, setListView] = useState<'walk' | 'points'>('walk');
 
   const activeRoute = routes.find((route) => route.is_active) ?? null;
@@ -112,12 +121,7 @@ function LiveDashboard() {
     });
     setChoosing(false);
     if (error) setTripNotice({ kind: 'error', message: error.message });
-    else setTripNotice({ kind: 'saved', tripId: data.id, points: data.points });
-  };
-
-  const undoTrip = async (tripId: string) => {
-    const { error } = await supabase.from('trips').delete().eq('id', tripId);
-    setTripNotice(error ? { kind: 'error', message: 'We couldn’t remove that trip. Try again from your profile.' } : { kind: 'removed' });
+    else setTripNotice({ kind: 'saved', points: data.points, pickupName: pickup.station.name.trim(), dropoffName: dropoff.station.name.trim() });
   };
 
   const deleteRoute = async (routeId: string) => {
@@ -238,24 +242,9 @@ function LiveDashboard() {
 
           <FreshnessBanner freshness={freshness} run={run} now={now} />
 
-          {tripNotice && (
-            <p
-              role="status"
-              className={`flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg p-4 text-sm ${tripNotice.kind === 'error' ? 'bg-warn-soft text-warn' : 'bg-bike-soft'}`}
-            >
-              {tripNotice.kind === 'error' && tripNotice.message}
-              {tripNotice.kind === 'removed' && 'Trip removed from your points.'}
-              {tripNotice.kind === 'saved' && (
-                <>
-                  <span className="font-semibold">Trip saved: +{tripNotice.points} points.</span>
-                  <Link href="/profile" className="underline">
-                    See your profile
-                  </Link>
-                  <button onClick={() => void undoTrip(tripNotice.tripId)} className="cursor-pointer underline">
-                    Undo
-                  </button>
-                </>
-              )}
+          {tripNotice?.kind === 'error' && (
+            <p role="alert" className="rounded-lg bg-warn-soft p-4 text-sm text-warn">
+              {tripNotice.message}
             </p>
           )}
 
@@ -335,6 +324,19 @@ function LiveDashboard() {
             </>
           ) : null}
         </>
+      )}
+      {tripNotice?.kind === 'saved' && (
+        <div
+          role="status"
+          className="trip-toast fixed inset-x-0 bottom-0 z-[1000] mx-auto mb-[max(1rem,env(safe-area-inset-bottom))] w-[min(28rem,calc(100%-2rem))] rounded-lg border border-bike bg-surface p-4 shadow-lg"
+        >
+          <p className="font-semibold">
+            Trip saved: <span className="font-mono text-bike">+{tripNotice.points} points</span>
+          </p>
+          <p className="text-sm text-muted">
+            {tripNotice.pickupName} to {tripNotice.dropoffName}
+          </p>
+        </div>
       )}
     </>
   );

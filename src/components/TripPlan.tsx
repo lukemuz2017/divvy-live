@@ -151,22 +151,25 @@ export function TripPlan({
         )}
       </div>
 
-      <StationOptions
-        title="Pick up"
-        options={pickups}
-        measure={measure}
-        bestOfBoth={pickupsInBoth}
-        changeCounts={changeCounts}
-        emptyMessage={pickupEmptyMessage}
-      />
-      <StationOptions
-        title="Drop off"
-        options={dropoffs}
-        measure={measure}
-        bestOfBoth={dropoffsInBoth}
-        changeCounts={changeCounts}
-        emptyMessage={dropoffEmptyMessage}
-      />
+      {/* Side by side on wider screens, stacked on phones. */}
+      <div className="grid gap-5 md:grid-cols-2">
+        <StationOptions
+          title="Pick up"
+          options={pickups}
+          measure={measure}
+          bestOfBoth={pickupsInBoth}
+          changeCounts={changeCounts}
+          emptyMessage={pickupEmptyMessage}
+        />
+        <StationOptions
+          title="Drop off"
+          options={dropoffs}
+          measure={measure}
+          bestOfBoth={dropoffsInBoth}
+          changeCounts={changeCounts}
+          emptyMessage={dropoffEmptyMessage}
+        />
+      </div>
     </section>
   );
 }

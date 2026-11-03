@@ -145,3 +145,21 @@ body {
     filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.85);
   }
 }
+
+/* The trip-saved pop-up slides up from the bottom of the screen. */
+@keyframes trip-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.trip-toast {
+  animation: trip-toast-in 0.25s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trip-toast {
+    animation: none;
+  }
+}

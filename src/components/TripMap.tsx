@@ -44,7 +44,8 @@ export function TripMap({
 
     void import('leaflet').then((L) => {
       if (cancelled || !containerRef.current) return;
-      const map = L.map(containerRef.current, { scrollWheelZoom: false, zoomControl: false });
+      // Zoom buttons and pinch work, but the scroll wheel stays off so scrolling the page never gets stuck on the map.
+      const map = L.map(containerRef.current, { scrollWheelZoom: false, zoomControl: true });
       L.tileLayer(TILE_URL, { attribution: ATTRIBUTION, maxZoom: 19 }).addTo(map);
       leafletRef.current = L;
       mapRef.current = map;
@@ -70,9 +71,8 @@ export function TripMap({
     const bike = token('--bike');
     const ink = token('--ink');
     const surface = token('--surface');
-    const muted = token('--muted');
 
-    const walk = { color: muted, weight: 3, dashArray: '4 7', className: 'map-walk', interactive: false };
+    const walk = { color: ink, weight: 4, opacity: 0.85, dashArray: '1 9', lineCap: 'round' as const, className: 'map-walk', interactive: false };
     L.polyline([latLng(start), latLng(pickup)], walk).addTo(overlays);
     L.polyline([latLng(dropoff), latLng(end)], walk).addTo(overlays);
     L.polyline([latLng(pickup), latLng(dropoff)], { color: bike, weight: 4, opacity: 0.9, interactive: false }).addTo(overlays);
