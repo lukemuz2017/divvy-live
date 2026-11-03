@@ -71,6 +71,7 @@ function LiveDashboard() {
   const [reversed, setReversed] = useState(false);
   const [choosing, setChoosing] = useState(false);
   const [tripNotice, setTripNotice] = useState<TripNotice | null>(null);
+  const [listView, setListView] = useState<'walk' | 'points'>('walk');
 
   const activeRoute = routes.find((route) => route.is_active) ?? null;
   const nearby = useNearbyStations(supabase, activeRoute);
@@ -304,7 +305,21 @@ function LiveDashboard() {
                 />
               )}
 
-              <div className="grid gap-8 md:grid-cols-2 md:gap-6">
+              <div role="group" aria-label="Which list to show" className="flex overflow-hidden rounded-md border border-line bg-surface text-sm justify-self-start">
+                {(['walk', 'points'] as const).map((view) => (
+                  <button
+                    key={view}
+                    onClick={() => setListView(view)}
+                    aria-pressed={listView === view}
+                    className={`cursor-pointer px-4 py-1.5 font-semibold ${listView === view ? 'bg-bike text-surface' : 'text-muted hover:text-ink'}`}
+                  >
+                    {view === 'walk' ? 'Shortest walk' : 'Most points'}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid gap-8">
+                {listView === 'walk' ? (
                 <TripPlan
                   title="Shortest walk"
                   description="The closest stations with a bike to take and a dock to return it to."
@@ -319,6 +334,7 @@ function LiveDashboard() {
                   choosing={choosing}
                   onChoose={(pickup, dropoff) => void chooseTrip(pickup, dropoff)}
                 />
+                ) : (
                 <TripPlan
                   title="Most points"
                   description="The stations that need the most help, within a half-mile walk of each end."
@@ -328,12 +344,13 @@ function LiveDashboard() {
                   pickupsInBoth={pickupsInBoth}
                   dropoffsInBoth={dropoffsInBoth}
                   changeCounts={nearby.changeCounts}
-                  note={tripsMatch ? 'This is the same trip as the shortest walk right now.' : undefined}
+                  note={tripsMatch ? "This is the same trip as the shortest walk right now." : undefined}
                   pickupEmptyMessage={pickupEmptyMessage}
                   dropoffEmptyMessage={dropoffEmptyMessage}
                   choosing={choosing}
                   onChoose={(pickup, dropoff) => void chooseTrip(pickup, dropoff)}
                 />
+                )}
               </div>
 
               <p className="font-mono text-xs text-muted" role="status">
