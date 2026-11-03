@@ -49,7 +49,7 @@ export function Dashboard() {
     <div className="mx-auto grid max-w-5xl gap-6 px-4 py-5 md:py-8">
       {isLoaded ? <LiveDashboard /> : <LoadingCards />}
       <footer className="text-sm text-muted">
-        A class project using Divvy’s public data. Not affiliated with Divvy or Lyft. Points are this app’s own estimate,
+        Not affiliated with Divvy or Lyft. Points are this app’s own estimate,
         not Bike Angels points. Walk times are straight-line estimates.
       </footer>
     </div>

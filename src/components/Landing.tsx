@@ -48,7 +48,7 @@ export function Landing() {
       </aside>
 
       <p className="text-sm text-muted md:col-span-2">
-        A class project using Divvy’s public data. Not affiliated with Divvy or Lyft.
+        Not affiliated with Divvy or Lyft.
       </p>
     </main>
   );
