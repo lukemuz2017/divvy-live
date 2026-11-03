@@ -2,10 +2,10 @@ import { formatMiles } from '@/lib/scoring';
 import type { Point, Priority, Recommendation } from '@/lib/scoring';
 import { TripMap } from './TripMap';
 
-export const VIEWS: { value: Priority; label: string; description: string }[] = [
-  { value: 'balanced', label: 'Best balance', description: 'Weighs helping rebalance bikes and keeping your walk short equally.' },
-  { value: 'walk', label: 'Shortest walk', description: 'The closest stations with a bike to take and a dock to return it to.' },
-  { value: 'points', label: 'Most points', description: 'The stations that need the most help, within a half-mile walk of each end.' },
+export const VIEWS: { value: Priority; label: string }[] = [
+  { value: 'balanced', label: 'Best balance' },
+  { value: 'walk', label: 'Shortest walk' },
+  { value: 'points', label: 'Most points' },
 ];
 
 // The one trip card. The toggle switches which kind of trip it shows, and the lists below follow it.
@@ -30,8 +30,6 @@ export function TripCard({
   canChoose: boolean;
   onChoose: (pickup: Recommendation, dropoff: Recommendation) => void;
 }) {
-  const current = VIEWS.find((option) => option.value === view) ?? VIEWS[0];
-
   return (
     <section className="grid gap-5 rounded-lg border-2 border-bike bg-surface p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]">
       <div className="grid content-start gap-4">
@@ -49,7 +47,6 @@ export function TripCard({
               </button>
             ))}
           </div>
-          <p className="text-sm text-muted">{current.description}</p>
         </div>
 
         {pickup && dropoff ? (
