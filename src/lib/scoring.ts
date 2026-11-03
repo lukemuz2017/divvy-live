@@ -180,6 +180,19 @@ export function recommendedDropoff(
   return bestForPriority(dropoffOptions(stations, statuses, point), priority);
 }
 
+// The top three by the 50/50 score, for the Best balance view.
+export function balancedPickups(stations: Station[], statuses: Map<string, StationStatus>, point: Point) {
+  return [...pickupOptions(stations, statuses, point)]
+    .sort((a, b) => balanceScore(b) - balanceScore(a) || a.miles - b.miles)
+    .slice(0, TOP_OPTIONS);
+}
+
+export function balancedDropoffs(stations: Station[], statuses: Map<string, StationStatus>, point: Point) {
+  return [...dropoffOptions(stations, statuses, point)]
+    .sort((a, b) => balanceScore(b) - balanceScore(a) || a.miles - b.miles)
+    .slice(0, TOP_OPTIONS);
+}
+
 // Stations in both top threes, which the page calls out as the best of both.
 export function sharedStationIds(a: Recommendation[], b: Recommendation[]): Set<string> {
   const inB = new Set(b.map((option) => option.station.station_id));

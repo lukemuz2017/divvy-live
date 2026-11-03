@@ -37,6 +37,7 @@ export function TripMap({
   const mapRef = useRef<LeafletMap | null>(null);
   const overlaysRef = useRef<LayerGroup | null>(null);
   const [ready, setReady] = useState(false);
+  const fittedTripRef = useRef<string | null>(null);
 
   // Leaflet needs the browser's window, so it loads here instead of at import time.
   useEffect(() => {
@@ -85,8 +86,14 @@ export function TripMap({
     place(pickup, `Pick up: ${pickupName}`, `<div class="live-pulse" style="width:18px;height:18px;border-radius:50%;background:${bike};border:3px solid ${surface}"></div>`, 18);
     place(dropoff, `Drop off: ${dropoffName}`, `<div style="width:18px;height:18px;border-radius:50%;background:${surface};border:4px solid ${bike}"></div>`, 18);
 
-    map.fitBounds(L.latLngBounds([start, pickup, dropoff, end].map(latLng)), { padding: [24, 24], maxZoom: 16 });
-  }, [ready, start, pickup, dropoff, end, pickupName, dropoffName]);
+    // Re-center only when the trip itself changes. The page re-renders every second, and re-centering
+    // each time would undo any zooming or dragging.
+    const trip = [start, pickup, dropoff, end].map((p) => `${p.lat},${p.lon}`).join('|');
+    if (fittedTripRef.current !== trip) {
+      fittedTripRef.current = trip;
+      map.fitBounds(L.latLngBounds([start, pickup, dropoff, end].map(latLng)), { padding: [24, 24], maxZoom: 16 });
+    }
+  }, [ready, start.lat, start.lon, pickup.lat, pickup.lon, dropoff.lat, dropoff.lon, end.lat, end.lon, pickupName, dropoffName]);
 
   return (
     <div

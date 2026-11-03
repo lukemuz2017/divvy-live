@@ -11,8 +11,8 @@ import {
   MAX_WALK_MILES,
   rankDropoffs,
   rankPickups,
-  recommendedDropoff,
-  recommendedPickup,
+  balancedDropoffs,
+  balancedPickups,
   sharedStationIds,
   stationsInRange,
 } from '@/lib/scoring';
@@ -20,7 +20,8 @@ import type { Priority, Recommendation } from '@/lib/scoring';
 import { FreshnessBadge, FreshnessBanner, timeAgo } from './FreshnessBadge';
 import { RouteForm, RouteFormDialog } from './RouteForm';
 import { SiteHeader } from './SiteHeader';
-import { RecommendedTrip, TripPlan } from './TripPlan';
+import { StationOptions } from './StationOptions';
+import { TripCard } from './TripPlan';
 
 
 type TripNotice = { kind: 'saved'; points: number; pickupName: string; dropoffName: string } | { kind: 'error'; message: string };
@@ -75,7 +76,8 @@ function LiveDashboard() {
     const timer = setTimeout(() => setTripNotice(null), SAVED_TOAST_MS);
     return () => clearTimeout(timer);
   }, [tripNotice]);
-  const [listView, setListView] = useState<'walk' | 'points'>('walk');
+  // Null means use the route's saved priority for this direction.
+  const [viewChoice, setViewChoice] = useState<Priority | null>(null);
 
   const activeRoute = routes.find((route) => route.is_active) ?? null;
   const nearby = useNearbyStations(supabase, activeRoute);
@@ -95,6 +97,7 @@ function LiveDashboard() {
 
   const activate = async (routeId: string) => {
     setReversed(false);
+    setViewChoice(null);
     setConfirmingDelete(false);
     setTripNotice(null);
     setRoutes((previous) => previous.map((route) => ({ ...route, is_active: route.id === routeId })));
@@ -138,17 +141,15 @@ function LiveDashboard() {
   const walkPickups = from ? closestPickups(nearby.stations, nearby.statuses, from) : [];
   const walkDropoffs = to ? closestDropoffs(nearby.stations, nearby.statuses, to) : [];
   const priority: Priority = activeRoute ? (reversed ? activeRoute.reverse_priority : activeRoute.forward_priority) : 'balanced';
-  const bestPickup = from ? recommendedPickup(nearby.stations, nearby.statuses, from, priority) : null;
-  const bestDropoff = to ? recommendedDropoff(nearby.stations, nearby.statuses, to, priority) : null;
+  const view: Priority = viewChoice ?? priority;
+  const balancedPickupList = from ? balancedPickups(nearby.stations, nearby.statuses, from) : [];
+  const balancedDropoffList = to ? balancedDropoffs(nearby.stations, nearby.statuses, to) : [];
+  const viewPickups = view === 'walk' ? walkPickups : view === 'points' ? pointPickups : balancedPickupList;
+  const viewDropoffs = view === 'walk' ? walkDropoffs : view === 'points' ? pointDropoffs : balancedDropoffList;
   const pickupsInBoth = sharedStationIds(pointPickups, walkPickups);
   const dropoffsInBoth = sharedStationIds(pointDropoffs, walkDropoffs);
   const stationsNearFrom = from ? stationsInRange(nearby.stations, from).length : 0;
   const stationsNearTo = to ? stationsInRange(nearby.stations, to).length : 0;
-  const tripsMatch =
-    pointPickups.length > 0 &&
-    pointDropoffs.length > 0 &&
-    pointPickups[0].station.station_id === walkPickups[0]?.station.station_id &&
-    pointDropoffs[0].station.station_id === walkDropoffs[0]?.station.station_id;
   const pickupEmptyMessage =
     stationsNearFrom === 0
       ? `No Divvy stations within ${MAX_WALK_MILES} miles of this start.`
@@ -231,7 +232,10 @@ function LiveDashboard() {
                 </button>
               )}
               <button
-                onClick={() => setReversed(!reversed)}
+                onClick={() => {
+                  setReversed(!reversed);
+                  setViewChoice(null);
+                }}
                 aria-pressed={reversed}
                 className="cursor-pointer rounded-md border border-line bg-surface px-3 py-1 font-semibold hover:border-bike"
               >
@@ -257,62 +261,35 @@ function LiveDashboard() {
             </section>
           ) : showOptions ? (
             <>
-              {bestPickup && bestDropoff && (
-                <RecommendedTrip
-                  pickup={bestPickup}
-                  dropoff={bestDropoff}
-                  start={from!}
-                  end={to!}
-                  priority={priority}
-                  choosing={choosing}
-                  onChoose={(pickup, dropoff) => void chooseTrip(pickup, dropoff)}
-                />
-              )}
+              <TripCard
+                view={view}
+                onViewChange={setViewChoice}
+                pickup={viewPickups[0]}
+                dropoff={viewDropoffs[0]}
+                start={from!}
+                end={to!}
+                choosing={choosing}
+                onChoose={(pickup, dropoff) => void chooseTrip(pickup, dropoff)}
+              />
 
-              <div role="group" aria-label="Which list to show" className="flex overflow-hidden rounded-md border border-line bg-surface text-sm justify-self-start">
-                {(['walk', 'points'] as const).map((view) => (
-                  <button
-                    key={view}
-                    onClick={() => setListView(view)}
-                    aria-pressed={listView === view}
-                    className={`cursor-pointer px-4 py-1.5 font-semibold ${listView === view ? 'bg-bike text-surface' : 'text-muted hover:text-ink'}`}
-                  >
-                    {view === 'walk' ? 'Shortest walk' : 'Most points'}
-                  </button>
-                ))}
-              </div>
-
-              <div className="grid gap-8">
-                {listView === 'walk' ? (
-                <TripPlan
-                  title="Shortest walk"
-                  measure="miles"
-                  pickups={walkPickups}
-                  dropoffs={walkDropoffs}
-                  pickupsInBoth={pickupsInBoth}
-                  dropoffsInBoth={dropoffsInBoth}
+              {/* Side by side on wider screens, stacked on phones. */}
+              <div className="grid gap-5 md:grid-cols-2">
+                <StationOptions
+                  title="Pick up"
+                  options={viewPickups}
+                  measure={view === 'points' ? 'points' : 'miles'}
+                  bestOfBoth={pickupsInBoth}
                   changeCounts={nearby.changeCounts}
-                  pickupEmptyMessage={pickupEmptyMessage}
-                  dropoffEmptyMessage={dropoffEmptyMessage}
-                  choosing={choosing}
-                  onChoose={(pickup, dropoff) => void chooseTrip(pickup, dropoff)}
+                  emptyMessage={pickupEmptyMessage}
                 />
-                ) : (
-                <TripPlan
-                  title="Most points"
-                  measure="points"
-                  pickups={pointPickups}
-                  dropoffs={pointDropoffs}
-                  pickupsInBoth={pickupsInBoth}
-                  dropoffsInBoth={dropoffsInBoth}
+                <StationOptions
+                  title="Drop off"
+                  options={viewDropoffs}
+                  measure={view === 'points' ? 'points' : 'miles'}
+                  bestOfBoth={dropoffsInBoth}
                   changeCounts={nearby.changeCounts}
-                  note={tripsMatch ? "This is the same trip as the shortest walk right now." : undefined}
-                  pickupEmptyMessage={pickupEmptyMessage}
-                  dropoffEmptyMessage={dropoffEmptyMessage}
-                  choosing={choosing}
-                  onChoose={(pickup, dropoff) => void chooseTrip(pickup, dropoff)}
+                  emptyMessage={dropoffEmptyMessage}
                 />
-                )}
               </div>
 
               <p className="font-mono text-xs text-muted" role="status">
