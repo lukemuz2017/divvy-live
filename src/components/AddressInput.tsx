@@ -9,7 +9,7 @@ const PHOTON_URL = 'https://photon.komoot.io/api/';
 const CHICAGO_AREA_BBOX = '-88.0,41.6,-87.5,42.1';
 const MIN_CHARS = 3;
 const DEBOUNCE_MS = 300;
-const MAX_SUGGESTIONS = 5;
+const MAX_SUGGESTIONS = 3;
 
 type Suggestion = { id: string; main: string; detail: string; value: string };
 
