@@ -33,9 +33,9 @@ Edge Functions run on Deno, so `supabase` must stay in the `exclude` list in `ts
 - Pick-up points: `10 × bikes ÷ (bikes + docks)`. The station must be renting and have at least 1 bike.
 - Drop-off points: `10 × docks ÷ (bikes + docks)`. The station must be accepting returns and have at least 1 dock.
 - Do not divide by capacity. It is unreliable because of broken docks.
-- The recommended trip at the top uses an internal score for each station: `w × (points ÷ 10) + (1 − w) × (1 − miles ÷ 0.5)`. It picks the best-scoring pick-up and drop-off from every usable station in range, and ties go to the shorter walk.
-- `w` comes from the route's priority for that direction: 0.2 for walking, 0.5 for balanced, 0.8 for points. It is chosen for each direction in the route form when the route is saved, and stored in `routes.forward_priority` and `routes.reverse_priority`.
-- Below it, the page has two sections, each with its own trip and top three pick-ups and drop-offs.
+- The Recommended trip card has a toggle: Best balance, Shortest walk or Most points. The card, its map and the pick-up and drop-off lists below all follow it.
+- Best balance ranks by an internal score: `0.5 × (points ÷ 10) + 0.5 × (1 − miles ÷ 0.5)`, and ties go to the shorter walk.
+- The route's saved priority for each direction, chosen in the add-route form and stored in `routes.forward_priority` and `routes.reverse_priority`, only picks which toggle option is selected when the page opens.
 - Public racks are left out of all recommendations.
 - Shortest walk ranks by distance, and ties go to more points. Most points ranks by points, and ties go to the shorter walk.
 
