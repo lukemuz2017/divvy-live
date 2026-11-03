@@ -43,7 +43,8 @@ Edge Functions run on Deno, so `supabase` must stay in the `exclude` list in `ts
 
 - Choosing a trip calls the `choose_trip` database function, which re-checks the stations and works out the points itself. Browsers can't insert or edit trips, so scores can't be typed in.
 - It can't tell whether a ride really happened. Trips are on the honor system, with a 30 minute wait between them.
-- `leaderboard()` returns display names and totals only. Other riders never see emails, user ids, routes or stations.
+- Every rider picks a nickname at first sign-in. `NicknameGate` blocks each signed-in page until `profiles` has one, and the profile page lets them change it.
+- `leaderboard()` returns nicknames and totals only. Other riders never see emails, user ids, routes or stations.
 - `choose_trip` and `leaderboard` are security definer functions that signed-in people are meant to call, so the two Supabase advisor warnings about them are expected.
 - These points are the app's own estimate. The public feeds have no Bike Angels data.
 

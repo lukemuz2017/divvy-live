@@ -18,6 +18,7 @@ import {
 import type { Priority, Recommendation } from '@/lib/scoring';
 import { FreshnessBadge, FreshnessBanner } from './FreshnessBadge';
 import { RouteForm, RouteFormDialog } from './RouteForm';
+import { NicknameGate } from './Nickname';
 import { SiteHeader } from './SiteHeader';
 import { StationOptions } from './StationOptions';
 import { TripCard } from './TripPlan';
@@ -47,7 +48,13 @@ export function Dashboard() {
 
   return (
     <div className="mx-auto grid max-w-5xl gap-6 px-4 py-5 md:py-8">
-      {isLoaded ? <LiveDashboard /> : <LoadingCards />}
+      {isLoaded ? (
+        <NicknameGate>
+          <LiveDashboard />
+        </NicknameGate>
+      ) : (
+        <LoadingCards />
+      )}
       <footer className="text-sm text-muted">
         Not affiliated with Divvy or Lyft. Points are this app’s own estimate,
         not Bike Angels points. Walk times are straight-line estimates.
@@ -64,7 +71,6 @@ function LiveDashboard() {
   const [routesLoaded, setRoutesLoaded] = useState(false);
   const [routesFailed, setRoutesFailed] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [reversed, setReversed] = useState(false);
   const [choosing, setChoosing] = useState(false);
   const [tripNotice, setTripNotice] = useState<TripNotice | null>(null);
@@ -97,7 +103,6 @@ function LiveDashboard() {
   const activate = async (routeId: string) => {
     setReversed(false);
     setViewChoice(null);
-    setConfirmingDelete(false);
     setTripNotice(null);
     setRoutes((previous) => previous.map((route) => ({ ...route, is_active: route.id === routeId })));
     const { error } = await supabase.rpc('set_active_route', { route_id: routeId });
@@ -124,12 +129,6 @@ function LiveDashboard() {
     setChoosing(false);
     if (error) setTripNotice({ kind: 'error', message: error.message });
     else setTripNotice({ kind: 'saved', points: data.points, pickupName: pickup.station.name.trim(), dropoffName: dropoff.station.name.trim() });
-  };
-
-  const deleteRoute = async (routeId: string) => {
-    setConfirmingDelete(false);
-    await supabase.from('routes').delete().eq('id', routeId);
-    await loadRoutes();
   };
 
   const ends = activeRoute ? routeEnds(activeRoute) : null;
@@ -208,21 +207,6 @@ function LiveDashboard() {
           </nav>
           {activeRoute && (
             <div className="flex flex-wrap items-center gap-3 text-sm">
-              {confirmingDelete ? (
-                <>
-                  <span>Delete {activeRoute.name}?</span>
-                  <button onClick={() => void deleteRoute(activeRoute.id)} className="cursor-pointer font-semibold text-bad underline">
-                    Delete route
-                  </button>
-                  <button onClick={() => setConfirmingDelete(false)} className="cursor-pointer text-muted underline">
-                    Keep it
-                  </button>
-                </>
-              ) : (
-                <button onClick={() => setConfirmingDelete(true)} className="cursor-pointer text-muted underline hover:text-ink">
-                  Delete this route
-                </button>
-              )}
               <button
                 onClick={() => {
                   setReversed(!reversed);

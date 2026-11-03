@@ -6,6 +6,7 @@ import { routeEnds, useSupabase } from '@/lib/live-data';
 import type { Route } from '@/lib/live-data';
 import { milesBetween } from '@/lib/scoring';
 import { RouteForm, RouteFormDialog } from './RouteForm';
+import { NicknameGate } from './Nickname';
 import { SiteHeader } from './SiteHeader';
 
 const MAX_NAME_LENGTH = 40;
@@ -16,7 +17,11 @@ export function SavedRoutes() {
   return (
     <div className="mx-auto grid max-w-3xl gap-6 px-4 py-5 md:py-8">
       <SiteHeader />
-      {isLoaded ? <RouteManager /> : <p role="status" className="text-muted">Loading your routes…</p>}
+      {isLoaded ? (
+        <NicknameGate>
+          <RouteManager />
+        </NicknameGate>
+      ) : <p role="status" className="text-muted">Loading your routes…</p>}
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useAuth } from '@clerk/nextjs';
 import { useEffect, useState } from 'react';
 import { useSupabase } from '@/lib/live-data';
+import { NicknameForm, NicknameGate, useNickname } from './Nickname';
 import { SiteHeader } from './SiteHeader';
 
 type LeaderboardRow = {
@@ -31,17 +32,21 @@ export function Profile() {
   return (
     <div className="mx-auto grid max-w-3xl gap-6 px-4 py-5 md:py-8">
       <SiteHeader />
-      {isLoaded && userId ? <ProfileDetails userId={userId} /> : <p role="status" className="text-muted">Loading your profile…</p>}
+      {isLoaded && userId ? (
+        <NicknameGate>
+          <ProfileDetails />
+        </NicknameGate>
+      ) : <p role="status" className="text-muted">Loading your profile…</p>}
     </div>
   );
 }
 
-function ProfileDetails({ userId }: { userId: string }) {
+function ProfileDetails() {
   const supabase = useSupabase();
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [displayName, setDisplayName] = useState('');
-  const [nameStatus, setNameStatus] = useState<{ ok: boolean; message: string } | null>(null);
+  const { nickname, save } = useNickname();
+  const [editingNickname, setEditingNickname] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -62,38 +67,8 @@ function ProfileDetails({ userId }: { userId: string }) {
 
   useEffect(() => {
     void loadScores();
-    void supabase
-      .from('profiles')
-      .select('display_name')
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) setDisplayName(data.display_name);
-      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
-
-  const saveName = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const name = displayName.trim();
-    if (name.length < 2) {
-      setNameStatus({ ok: false, message: 'Use at least 2 characters.' });
-      return;
-    }
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({ user_id: userId, display_name: name, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
-    if (error) {
-      setNameStatus({ ok: false, message: error.code === '23505' ? 'Someone already has that name.' : 'We couldn’t save your name. Try again.' });
-      return;
-    }
-    setNameStatus({ ok: true, message: 'Name saved.' });
-    await loadScores();
-  };
-
-  const removeTrip = async (tripId: string) => {
-    await supabase.from('trips').delete().eq('id', tripId);
-    await loadScores();
-  };
 
   const me = leaderboard.find((row) => row.is_me);
 
@@ -101,7 +76,31 @@ function ProfileDetails({ userId }: { userId: string }) {
 
   return (
     <main className="grid gap-8">
-      <h1 className="text-3xl font-bold tracking-tight">Your profile</h1>
+      <div className="grid gap-2">
+        <h1 className="text-3xl font-bold tracking-tight">{nickname ?? 'Your profile'}</h1>
+        {editingNickname ? (
+          <NicknameForm
+            initial={nickname ?? ''}
+            submitLabel="Save nickname"
+            onSave={async (name) => {
+              const error = await save(name);
+              if (!error) {
+                setEditingNickname(false);
+                await loadScores();
+              }
+              return error;
+            }}
+            onCancel={() => setEditingNickname(false)}
+          />
+        ) : (
+          <p className="text-sm text-muted">
+            Your nickname on the leaderboard.{' '}
+            <button onClick={() => setEditingNickname(true)} className="cursor-pointer underline hover:text-ink">
+              Change
+            </button>
+          </p>
+        )}
+      </div>
 
       {failed && (
         <section className="grid gap-1 rounded-lg bg-bad-soft p-4 text-bad" role="alert">
@@ -164,34 +163,6 @@ function ProfileDetails({ userId }: { userId: string }) {
         </p>
       </section>
 
-      <form onSubmit={(event) => void saveName(event)} className="grid gap-2">
-        <label htmlFor="display-name" className="text-xl font-bold">
-          Leaderboard name
-        </label>
-        <p className="text-sm text-muted">Other riders see this name and your totals, never your email, routes or stations.</p>
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            id="display-name"
-            value={displayName}
-            onChange={(event) => {
-              setDisplayName(event.target.value);
-              setNameStatus(null);
-            }}
-            maxLength={24}
-            placeholder="Choose a name"
-            className="min-w-0 flex-1 rounded-md border border-line bg-surface px-3 py-2"
-          />
-          <button type="submit" className="cursor-pointer rounded-md bg-bike px-4 py-2 font-semibold text-surface hover:opacity-90">
-            Save name
-          </button>
-        </div>
-        {nameStatus && (
-          <p role="status" className={`text-sm ${nameStatus.ok ? 'text-good' : 'text-bad'}`}>
-            {nameStatus.message}
-          </p>
-        )}
-      </form>
-
       <section className="grid gap-3">
         <h2 className="text-xl font-bold">Recent trips</h2>
         {trips.length === 0 ? (
@@ -211,12 +182,7 @@ function ProfileDetails({ userId }: { userId: string }) {
                     {new Date(trip.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}, {trip.miles} mi of walking
                   </p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className="font-mono font-medium text-bike">+{trip.points} pts</span>
-                  <button onClick={() => void removeTrip(trip.id)} className="cursor-pointer text-sm text-muted underline hover:text-ink">
-                    Remove
-                  </button>
-                </div>
+                <span className="font-mono font-medium text-bike">+{trip.points} pts</span>
               </li>
             ))}
           </ul>
