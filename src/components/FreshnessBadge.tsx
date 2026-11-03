@@ -1,10 +1,9 @@
 import type { Freshness, WorkerRun } from '@/lib/scoring';
 
+// Minutes only: counting seconds makes normal minute-to-minute updates look like a problem.
 export function timeAgo(iso: string | number, now: number): string {
-  const seconds = Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000));
-  if (seconds < 5) return 'just now';
-  if (seconds < 60) return `${seconds} sec ago`;
-  const minutes = Math.floor(seconds / 60);
+  const minutes = Math.floor(Math.max(0, now - new Date(iso).getTime()) / 60000);
+  if (minutes < 1) return 'just now';
   if (minutes < 60) return `${minutes} min ago`;
   const hours = Math.floor(minutes / 60);
   return hours === 1 ? '1 hour ago' : `${hours} hours ago`;
@@ -13,6 +12,7 @@ export function timeAgo(iso: string | number, now: number): string {
 const STYLES: Record<Freshness, { dot: string; text: string }> = {
   loading: { dot: 'bg-dock', text: 'text-muted' },
   fresh: { dot: 'bg-good live-pulse', text: 'text-good' },
+  delayed: { dot: 'bg-warn', text: 'text-warn' },
   stale: { dot: 'bg-warn', text: 'text-warn' },
   down: { dot: 'bg-bad', text: 'text-bad' },
 };
@@ -20,8 +20,9 @@ const STYLES: Record<Freshness, { dot: string; text: string }> = {
 export function FreshnessBadge({ freshness, run, now }: { freshness: Freshness; run: WorkerRun | null; now: number }) {
   const label = {
     loading: 'Connecting',
-    fresh: run ? `Live, checked ${timeAgo(run.ran_at, now)}` : 'Live',
-    stale: run ? `Out of date, checked ${timeAgo(run.ran_at, now)}` : 'Waiting for data',
+    fresh: 'Live',
+    delayed: run ? `Delayed, last checked ${timeAgo(run.ran_at, now)}` : 'Delayed',
+    stale: run ? `Out of date, last checked ${timeAgo(run.ran_at, now)}` : 'Waiting for data',
     down: 'Divvy check failed',
   }[freshness];
 

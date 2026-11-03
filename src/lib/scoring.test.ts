@@ -248,7 +248,9 @@ test('freshness moves through its states', () => {
   const now = 1_000_000_000;
   assert.equal(freshnessOf(null, false, now), 'loading');
   assert.equal(freshnessOf(run(30_000), true, now), 'fresh');
-  assert.equal(freshnessOf(run(STALE_AFTER_MS), true, now), 'fresh');
+  assert.equal(freshnessOf(run(63_000), true, now), 'fresh', 'a run arriving a few seconds late is normal');
+  assert.equal(freshnessOf(run(91_000), true, now), 'delayed', 'past 90 seconds, a run was missed');
+  assert.equal(freshnessOf(run(STALE_AFTER_MS), true, now), 'delayed');
   assert.equal(freshnessOf(run(STALE_AFTER_MS + 1), true, now), 'stale');
   assert.equal(freshnessOf(run(30_000, false), true, now), 'down');
   assert.equal(freshnessOf(null, true, now), 'stale');

@@ -2,6 +2,8 @@
 
 export const MAX_WALK_MILES = 0.5;
 export const STALE_AFTER_MS = 3 * 60 * 1000;
+// Runs arrive about every 60 seconds, so past 90 the last one was missed.
+export const DELAYED_AFTER_MS = 90 * 1000;
 const WALK_MINUTES_PER_MILE = 20;
 const EARTH_RADIUS_MILES = 3958.8;
 const MILES_PER_DEGREE_LAT = 69;
@@ -33,7 +35,7 @@ export type WorkerRun = {
   error: string | null;
 };
 
-export type Freshness = 'loading' | 'fresh' | 'stale' | 'down';
+export type Freshness = 'loading' | 'fresh' | 'delayed' | 'stale' | 'down';
 
 export type Recommendation = {
   station: Station;
@@ -206,5 +208,7 @@ export function freshnessOf(run: WorkerRun | null, loaded: boolean, nowMs: numbe
   if (!loaded) return 'loading';
   if (!run) return 'stale';
   if (!run.ok) return 'down';
-  return nowMs - new Date(run.ran_at).getTime() > STALE_AFTER_MS ? 'stale' : 'fresh';
+  const ageMs = nowMs - new Date(run.ran_at).getTime();
+  if (ageMs > STALE_AFTER_MS) return 'stale';
+  return ageMs > DELAYED_AFTER_MS ? 'delayed' : 'fresh';
 }

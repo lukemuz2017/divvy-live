@@ -165,7 +165,8 @@ function LiveDashboard() {
     stationsNearTo === 0
       ? `No Divvy stations within ${MAX_WALK_MILES} miles of this destination.`
       : `None of the ${stationsNearTo} stations nearby has an open dock right now. This page will update when one does.`;
-  const showOptions = freshness === 'fresh';
+  // A delayed check still means the data is under 3 minutes old, so recommendations stay up.
+  const showOptions = freshness === 'fresh' || freshness === 'delayed';
   const lastChangedStation = nearby.stations.find((station) => station.station_id === nearby.lastChange?.stationId);
   const showForm = routesLoaded && !routesFailed && (adding || routes.length === 0);
 
