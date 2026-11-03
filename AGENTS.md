@@ -53,8 +53,9 @@ Edge Functions run on Deno, so `supabase` must stay in the `exclude` list in `ts
 - Fresh: the newest run succeeded within the last 90 seconds. The badge just says "Live" and pulses.
 - Delayed: the newest run is 90 seconds to 3 minutes old, so a run was missed. The badge shows minutes since the last check, and recommendations stay up.
 - Times are shown in minutes, never seconds.
-- Stale: the newest run is more than 3 minutes old. The browser checks this on its own clock, because a stopped worker sends nothing. Hide recommendations.
-- Down: the newest run failed. Hide recommendations.
+- Stale: the newest run is more than 3 minutes old. The browser checks this on its own clock, because a stopped worker sends nothing. Recommendations stay up under a warning, and choosing a trip is turned off.
+- Down: the newest run failed. Same as stale, with a different warning.
+- While the data looks older than 90 seconds, the page rechecks the database every 30 seconds, because a Realtime connection can drop without an error.
 - Also design for no stations within range, and no bikes or docks available nearby.
 
 ## Free tier limits

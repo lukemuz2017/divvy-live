@@ -41,7 +41,7 @@ export function FreshnessBanner({ freshness, run, now }: { freshness: Freshness;
         <h2 className="font-semibold">Bike counts may be out of date</h2>
         <p className="text-sm">
           {run ? `The last check was ${timeAgo(run.ran_at, now)}. ` : 'No check has run yet. '}
-          We’ve hidden recommendations so we don’t send you to an empty station. They’ll come back on their own.
+          The stations below may have changed since then, so check before you walk over. This updates on its own.
         </p>
       </section>
     );
@@ -51,8 +51,8 @@ export function FreshnessBanner({ freshness, run, now }: { freshness: Freshness;
       <section className="grid gap-1 rounded-lg bg-bad-soft p-4 text-bad">
         <h2 className="font-semibold">We can’t get bike counts from Divvy right now</h2>
         <p className="text-sm">
-          The last check failed {run ? timeAgo(run.ran_at, now) : ''}. We’ve hidden recommendations until a check
-          succeeds, and we’ll keep trying every minute.
+          The last check failed {run ? timeAgo(run.ran_at, now) : ''}. The stations below show the last counts we got,
+          so they may have changed. We’ll keep trying every minute.
         </p>
       </section>
     );

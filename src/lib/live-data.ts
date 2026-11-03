@@ -4,7 +4,10 @@ import { useAuth } from '@clerk/nextjs';
 import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { boundsAround, isCompleteRun, isCompleteStatus, stationsInRange } from './scoring.ts';
+import { boundsAround, DELAYED_AFTER_MS, isCompleteRun, isCompleteStatus, stationsInRange } from './scoring.ts';
+
+// While the data looks old, the page rechecks the database this often instead of trusting Realtime.
+const RECHECK_MS = 30_000;
 import type { Point, Priority, Station, StationStatus, WorkerRun } from './scoring.ts';
 
 // Realtime filters accept up to 100 values, so each end of a route watches its 50 nearest stations.
@@ -104,6 +107,21 @@ export function useLatestRun(supabase: SupabaseClient) {
   }, [supabase]);
 
   useReloadOnReturn(() => void load());
+
+  // A Realtime connection can drop without any error. If no run has arrived lately, ask the database
+  // directly, so the page only says the data is old when it really is.
+  const runRef = useRef(run);
+  useEffect(() => {
+    runRef.current = run;
+  }, [run]);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const latest = runRef.current;
+      if (!latest || Date.now() - new Date(latest.ran_at).getTime() > DELAYED_AFTER_MS) void load();
+    }, RECHECK_MS);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase]);
 
   return { run, loaded };
 }
@@ -216,5 +234,5 @@ export function useNearbyStations(supabase: SupabaseClient, route: Route | null)
 
   useReloadOnReturn(() => void loadStatuses());
 
-  return { stations, statuses, changeCounts, lastChange, loading, failed };
+  return { stations, statuses, changeCounts, lastChange, loading, failed, reload: loadStatuses };
 }

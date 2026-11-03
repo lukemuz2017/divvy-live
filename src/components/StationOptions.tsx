@@ -5,7 +5,8 @@ import { formatMiles } from '@/lib/scoring';
 import type { Recommendation } from '@/lib/scoring';
 import { DockMeter } from './DockMeter';
 
-export type Measure = 'points' | 'miles';
+// Which number to highlight on each row. Best balance highlights neither, since it weighs both.
+export type Measure = 'points' | 'miles' | 'both';
 
 function countsLabel(option: Recommendation): string {
   const { bikes, ebikes, docks } = option.status;
@@ -19,13 +20,11 @@ function StationOption({
   rank,
   measure,
   changes,
-  bestOfBoth,
 }: {
   option: Recommendation;
   rank: number;
   measure: Measure;
   changes: number;
-  bestOfBoth: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const detailsId = useId();
@@ -33,7 +32,7 @@ function StationOption({
   const miles = formatMiles(option.miles);
 
   return (
-    <li className={`overflow-hidden rounded-lg border bg-surface ${bestOfBoth ? 'border-bike' : 'border-line'}`}>
+    <li className="overflow-hidden rounded-lg border border-line bg-surface">
       {/* A new key replays the flash each time Realtime delivers a change, while the open state above it survives. */}
       <div key={changes} className={changes > 0 ? 'station-changed' : ''}>
         <button
@@ -45,18 +44,12 @@ function StationOption({
           <span className="min-w-0 font-semibold">
             <span className="mr-2 font-mono text-sm font-normal text-muted">{rank}</span>
             {option.station.name}
-            {bestOfBoth && (
-              <span
-                title="In the top three for both walking distance and points"
-                className="ml-2 inline-block rounded-full bg-bike-soft px-2 py-0.5 align-middle font-mono text-xs font-medium text-bike"
-              >
-                Best of both
-              </span>
-            )}
           </span>
           <span className="flex shrink-0 items-center gap-2">
-            <span className={`font-mono font-medium ${measure === 'points' ? 'text-bike' : ''}`}>
-              {measure === 'points' ? points : miles}
+            <span className="font-mono text-sm whitespace-nowrap">
+              <span className={measure === 'miles' ? 'text-muted' : 'font-medium text-bike'}>{points}</span>
+              <span className="text-muted"> · </span>
+              <span className={measure === 'points' ? 'text-muted' : 'font-medium text-ink'}>{miles}</span>
             </span>
             <svg
               viewBox="0 0 16 16"
@@ -76,7 +69,7 @@ function StationOption({
           <DockMeter bikes={option.status.bikes} docks={option.status.docks} />
           <p className="text-sm text-muted">{countsLabel(option)}</p>
           <p className="text-sm text-muted">
-            {measure === 'points' ? miles : points}, about {option.walkMinutes} min walk
+            About {option.walkMinutes} min walk
           </p>
         </div>
       </div>
@@ -88,14 +81,12 @@ export function StationOptions({
   title,
   options,
   measure,
-  bestOfBoth,
   changeCounts,
   emptyMessage,
 }: {
   title: string;
   options: Recommendation[];
   measure: Measure;
-  bestOfBoth: Set<string>;
   changeCounts: Map<string, number>;
   emptyMessage: string;
 }) {
@@ -113,7 +104,6 @@ export function StationOptions({
               rank={index + 1}
               measure={measure}
               changes={changeCounts.get(option.station.station_id) ?? 0}
-              bestOfBoth={bestOfBoth.has(option.station.station_id)}
             />
           ))}
         </ol>

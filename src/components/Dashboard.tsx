@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@clerk/nextjs';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { routeEnds, useLatestRun, useNearbyStations, useNow, useSupabase } from '@/lib/live-data';
 import type { Route } from '@/lib/live-data';
 import {
@@ -13,7 +13,6 @@ import {
   rankPickups,
   balancedDropoffs,
   balancedPickups,
-  sharedStationIds,
   stationsInRange,
 } from '@/lib/scoring';
 import type { Priority, Recommendation } from '@/lib/scoring';
@@ -146,8 +145,6 @@ function LiveDashboard() {
   const balancedDropoffList = to ? balancedDropoffs(nearby.stations, nearby.statuses, to) : [];
   const viewPickups = view === 'walk' ? walkPickups : view === 'points' ? pointPickups : balancedPickupList;
   const viewDropoffs = view === 'walk' ? walkDropoffs : view === 'points' ? pointDropoffs : balancedDropoffList;
-  const pickupsInBoth = sharedStationIds(pointPickups, walkPickups);
-  const dropoffsInBoth = sharedStationIds(pointDropoffs, walkDropoffs);
   const stationsNearFrom = from ? stationsInRange(nearby.stations, from).length : 0;
   const stationsNearTo = to ? stationsInRange(nearby.stations, to).length : 0;
   const pickupEmptyMessage =
@@ -159,7 +156,19 @@ function LiveDashboard() {
       ? `No Divvy stations within ${MAX_WALK_MILES} miles of this destination.`
       : `None of the ${stationsNearTo} stations nearby has an open dock right now. This page will update when one does.`;
   // A delayed check still means the data is under 3 minutes old, so recommendations stay up.
-  const showOptions = freshness === 'fresh' || freshness === 'delayed';
+  // Recommendations stay up even when the data is old. The banner above them says so, and choosing a trip
+  // waits for current data because the database won't score old counts.
+  const showOptions = freshness !== 'loading';
+  const canChoose = freshness === 'fresh' || freshness === 'delayed';
+  const wasCurrentRef = useRef(true);
+  useEffect(() => {
+    if (freshness === 'loading') return;
+    const current = freshness === 'fresh';
+    // Coming back to current data after a gap means station pushes may have been missed too.
+    if (current && !wasCurrentRef.current) nearby.reload();
+    wasCurrentRef.current = current;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [freshness]);
   const lastChangedStation = nearby.stations.find((station) => station.station_id === nearby.lastChange?.stationId);
   const showFirstRouteForm = routesLoaded && !routesFailed && routes.length === 0;
 
@@ -177,44 +186,28 @@ function LiveDashboard() {
       )}
 
       {routes.length > 0 && (
-        <nav aria-label="Your routes" className="flex flex-wrap items-center gap-2">
-          {routes.map((route) => (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <nav aria-label="Your routes" className="flex flex-wrap items-center gap-2">
+            {routes.map((route) => (
+              <button
+                key={route.id}
+                onClick={() => void activate(route.id)}
+                aria-pressed={route.is_active}
+                className={`cursor-pointer rounded-full border px-4 py-1.5 text-sm font-semibold ${
+                  route.is_active ? 'border-bike bg-bike text-surface' : 'border-line bg-surface hover:border-bike'
+                }`}
+              >
+                {route.name}
+              </button>
+            ))}
             <button
-              key={route.id}
-              onClick={() => void activate(route.id)}
-              aria-pressed={route.is_active}
-              className={`cursor-pointer rounded-full border px-4 py-1.5 text-sm font-semibold ${
-                route.is_active ? 'border-bike bg-bike text-surface' : 'border-line bg-surface hover:border-bike'
-              }`}
+              onClick={() => setAdding(true)}
+              className="cursor-pointer rounded-full border border-dashed border-line px-4 py-1.5 text-sm font-semibold text-muted hover:border-bike hover:text-ink"
             >
-              {route.name}
+              Add a route
             </button>
-          ))}
-          <button
-            onClick={() => setAdding(true)}
-            className="cursor-pointer rounded-full border border-dashed border-line px-4 py-1.5 text-sm font-semibold text-muted hover:border-bike hover:text-ink"
-          >
-            Add a route
-          </button>
-        </nav>
-      )}
-
-      {showFirstRouteForm && <RouteForm isFirst onSaved={(route) => void onSaved(route)} onCancel={() => setAdding(false)} />}
-      {adding && routes.length > 0 && (
-        <RouteFormDialog onSaved={(route) => void onSaved(route)} onCancel={() => setAdding(false)} />
-      )}
-
-      {routesLoaded && routes.length > 0 && !activeRoute && !adding && (
-        <p className="rounded-lg border border-dashed border-line p-4 text-muted">
-          Choose a route above to see where to pick up and drop off.
-        </p>
-      )}
-
-      {!routesLoaded && <LoadingCards />}
-
-      {activeRoute && (
-        <>
-          <div className="flex flex-wrap items-center justify-end gap-3">
+          </nav>
+          {activeRoute && (
             <div className="flex flex-wrap items-center gap-3 text-sm">
               {confirmingDelete ? (
                 <>
@@ -237,13 +230,30 @@ function LiveDashboard() {
                   setViewChoice(null);
                 }}
                 aria-pressed={reversed}
-                className="cursor-pointer rounded-md border border-line bg-surface px-3 py-1 font-semibold hover:border-bike"
+                className="cursor-pointer rounded-full border border-line bg-surface px-4 py-1.5 font-semibold hover:border-bike"
               >
                 {reversed ? 'Original direction' : 'Reverse direction'}
               </button>
             </div>
-          </div>
+          )}
+        </div>
+      )}
 
+      {showFirstRouteForm && <RouteForm isFirst onSaved={(route) => void onSaved(route)} onCancel={() => setAdding(false)} />}
+      {adding && routes.length > 0 && (
+        <RouteFormDialog onSaved={(route) => void onSaved(route)} onCancel={() => setAdding(false)} />
+      )}
+
+      {routesLoaded && routes.length > 0 && !activeRoute && !adding && (
+        <p className="rounded-lg border border-dashed border-line p-4 text-muted">
+          Choose a route above to see where to pick up and drop off.
+        </p>
+      )}
+
+      {!routesLoaded && <LoadingCards />}
+
+      {activeRoute && (
+        <>
           <FreshnessBanner freshness={freshness} run={run} now={now} />
 
           {tripNotice?.kind === 'error' && (
@@ -269,6 +279,7 @@ function LiveDashboard() {
                 start={from!}
                 end={to!}
                 choosing={choosing}
+                canChoose={canChoose}
                 onChoose={(pickup, dropoff) => void chooseTrip(pickup, dropoff)}
               />
 
@@ -277,16 +288,14 @@ function LiveDashboard() {
                 <StationOptions
                   title="Pick up"
                   options={viewPickups}
-                  measure={view === 'points' ? 'points' : 'miles'}
-                  bestOfBoth={pickupsInBoth}
+                  measure={view === 'points' ? 'points' : view === 'walk' ? 'miles' : 'both'}
                   changeCounts={nearby.changeCounts}
                   emptyMessage={pickupEmptyMessage}
                 />
                 <StationOptions
                   title="Drop off"
                   options={viewDropoffs}
-                  measure={view === 'points' ? 'points' : 'miles'}
-                  bestOfBoth={dropoffsInBoth}
+                  measure={view === 'points' ? 'points' : view === 'walk' ? 'miles' : 'both'}
                   changeCounts={nearby.changeCounts}
                   emptyMessage={dropoffEmptyMessage}
                 />

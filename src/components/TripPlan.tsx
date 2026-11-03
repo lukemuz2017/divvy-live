@@ -17,6 +17,7 @@ export function TripCard({
   start,
   end,
   choosing,
+  canChoose,
   onChoose,
 }: {
   view: Priority;
@@ -26,6 +27,7 @@ export function TripCard({
   start: Point;
   end: Point;
   choosing: boolean;
+  canChoose: boolean;
   onChoose: (pickup: Recommendation, dropoff: Recommendation) => void;
 }) {
   const current = VIEWS.find((option) => option.value === view) ?? VIEWS[0];
@@ -74,11 +76,12 @@ export function TripCard({
             </div>
             <button
               onClick={() => onChoose(pickup, dropoff)}
-              disabled={choosing}
-              className="cursor-pointer justify-self-start rounded-md bg-bike px-4 py-2 font-semibold text-surface hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+              disabled={choosing || !canChoose}
+              className="cursor-pointer justify-self-start rounded-md bg-bike px-4 py-2 font-semibold text-surface hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {choosing ? 'Saving…' : 'Choose this trip'}
             </button>
+            {!canChoose && <p className="text-sm text-muted">You can choose a trip again once bike counts are current.</p>}
           </>
         ) : (
           <p className="text-muted">We can’t recommend a full trip right now. See what’s available below.</p>
