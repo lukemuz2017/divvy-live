@@ -22,6 +22,7 @@ export type Route = {
   end_lat: number;
   end_lon: number;
   forward_priority: Priority;
+  on_dashboard: boolean;
   reverse_priority: Priority;
 };
 

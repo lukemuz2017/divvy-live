@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { routeEnds, useSupabase } from '@/lib/live-data';
 import type { Route } from '@/lib/live-data';
 import { milesBetween } from '@/lib/scoring';
-import { RouteForm, RouteFormDialog } from './RouteForm';
+import { HomeSwapDialog, RouteForm, RouteFormDialog } from './RouteForm';
 import { NicknameGate } from './Nickname';
 import { SiteHeader } from './SiteHeader';
 
@@ -49,6 +49,35 @@ function RouteManager() {
     void loadRoutes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
+
+  const homeCount = routes.filter((route) => route.on_dashboard).length;
+
+  const [swapFor, setSwapFor] = useState<Route | null>(null);
+
+  // Puts a route on Home after taking another off, when Home is already full.
+  const swapOntoHome = async (incoming: Route, outgoing: Route) => {
+    setSwapFor(null);
+    setDeleteError(null);
+    const now = new Date().toISOString();
+    const off = await supabase.from('routes').update({ on_dashboard: false, updated_at: now }).eq('id', outgoing.id);
+    const on = off.error ? off : await supabase.from('routes').update({ on_dashboard: true, updated_at: now }).eq('id', incoming.id);
+    if (on.error) setDeleteError('We couldn’t update Home. Try again.');
+    await loadRoutes();
+  };
+
+  const toggleHome = async (route: Route) => {
+    setDeleteError(null);
+    if (!route.on_dashboard && homeCount >= 3) {
+      setSwapFor(route);
+      return;
+    }
+    const { error } = await supabase
+      .from('routes')
+      .update({ on_dashboard: !route.on_dashboard, updated_at: new Date().toISOString() })
+      .eq('id', route.id);
+    if (error) setDeleteError(error.code === 'P0001' ? error.message : 'We couldn’t update that route. Try again.');
+    await loadRoutes();
+  };
 
   const startRename = (route: Route) => {
     setRenamingId(route.id);
@@ -96,7 +125,7 @@ function RouteManager() {
     <main className="grid gap-5">
       <div className="grid gap-1">
         <h1 className="text-3xl font-bold tracking-tight">Saved routes</h1>
-        <p className="text-sm text-muted">We don’t store your addresses, so each route shows the distance between its ends.</p>
+        <p className="text-sm text-muted">We don’t store your addresses, so each route shows the distance between its ends. Up to 3 routes can show on Home.</p>
       </div>
 
       {deleteError && (
@@ -164,6 +193,13 @@ function RouteManager() {
                         </>
                       ) : (
                         <>
+                          <button
+                            onClick={() => void toggleHome(route)}
+                            aria-pressed={route.on_dashboard}
+                            className={`cursor-pointer rounded-full border px-3 py-1 font-semibold ${route.on_dashboard ? 'border-bike bg-bike text-surface' : 'border-line text-muted hover:border-bike hover:text-ink'}`}
+                          >
+                            {route.on_dashboard ? 'On Home' : 'Show on Home'}
+                          </button>
                           <button onClick={() => startRename(route)} className="cursor-pointer text-muted underline hover:text-ink">
                             Rename
                           </button>
@@ -181,8 +217,17 @@ function RouteManager() {
         </ul>
       )}
 
+      {swapFor && (
+        <HomeSwapDialog
+          homeRoutes={routes.filter((route) => route.on_dashboard)}
+          onPick={(outgoing) => void swapOntoHome(swapFor, outgoing)}
+          onCancel={() => setSwapFor(null)}
+        />
+      )}
+
       {adding && routes.length > 0 && (
         <RouteFormDialog
+          homeRoutes={routes.filter((route) => route.on_dashboard)}
           onSaved={() => {
             setAdding(false);
             void loadRoutes();

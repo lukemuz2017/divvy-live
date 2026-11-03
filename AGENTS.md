@@ -25,6 +25,7 @@ Edge Functions run on Deno, so `supabase` must stay in the `exclude` list in `ts
 - Realtime needs three things for each table: added to the `supabase_realtime` publication, read access granted, and a row-level security policy. If one is missing, the page gets nothing and shows no error.
 - Each page subscribes only to the stations near its active route, to stay within the free Realtime message limit.
 - Never store typed addresses. `routes` holds coordinates rounded to three decimals, and only their owner can read them.
+- Up to 3 routes show as buttons on Home (`routes.on_dashboard`). A database trigger enforces the limit. The rest are only on Saved routes, where the Show on Home toggle lives.
 - Switch the active route with the `set_active_route` database function, because a person can have only one active route at a time.
 
 ## Scoring

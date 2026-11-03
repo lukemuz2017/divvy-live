@@ -42,15 +42,22 @@ const FIELDS: { id: FieldName; label: string; placeholder: string }[] = [
 export function RouteForm({
   isFirst,
   onSaved,
+  homeRoutes = [],
   onCancel,
 }: {
   isFirst: boolean;
+  homeRoutes?: Route[];
   onSaved: (route: Route) => void;
   onCancel: () => void;
 }) {
   const [values, setValues] = useState<Record<FieldName, string>>({ name: '', start: '', end: '' });
   const [forwardPriority, setForwardPriority] = useState<Priority>('balanced');
   const [reversePriority, setReversePriority] = useState<Priority>('balanced');
+  const homeFull = homeRoutes.length >= 3;
+  // On by default while Home has room. When Home is full, turning it on asks which route to take off.
+  const [onDashboard, setOnDashboard] = useState(!homeFull);
+  const [replaceRoute, setReplaceRoute] = useState<Route | null>(null);
+  const [pickingReplacement, setPickingReplacement] = useState(false);
   const [error, setError] = useState<{ message: string; field?: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -62,7 +69,7 @@ export function RouteForm({
       const response = await fetch('/api/routes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...values, forwardPriority, reversePriority }),
+        body: JSON.stringify({ ...values, forwardPriority, reversePriority, onDashboard, replaceRouteId: onDashboard ? replaceRoute?.id : undefined }),
       });
       const body = await response.json();
       if (!response.ok) {
@@ -110,6 +117,36 @@ export function RouteForm({
         <PriorityPicker legend="Start to end: what matters most?" value={forwardPriority} onChange={setForwardPriority} />
         <PriorityPicker legend="End to start: what matters most?" value={reversePriority} onChange={setReversePriority} />
       </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={onDashboard}
+          onChange={(event) => {
+            if (event.target.checked && homeFull && !replaceRoute) {
+              setPickingReplacement(true);
+              return;
+            }
+            setOnDashboard(event.target.checked);
+            if (!event.target.checked) setReplaceRoute(null);
+          }}
+          className="size-4 accent-[var(--bike)]"
+        />
+        <span>
+          Show on Home
+          {onDashboard && replaceRoute ? <span className="text-muted"> (replaces {replaceRoute.name})</span> : null}
+        </span>
+      </label>
+      {pickingReplacement && (
+        <HomeSwapDialog
+          homeRoutes={homeRoutes}
+          onPick={(route) => {
+            setReplaceRoute(route);
+            setOnDashboard(true);
+            setPickingReplacement(false);
+          }}
+          onCancel={() => setPickingReplacement(false)}
+        />
+      )}
       {error && (
         <p id="route-form-error" role="alert" className="text-sm text-bad">
           {error.message}
@@ -134,7 +171,15 @@ export function RouteForm({
 }
 
 // Opens the form over the page. The browser's own dialog handles Escape and keeps keyboard focus inside it.
-export function RouteFormDialog({ onSaved, onCancel }: { onSaved: (route: Route) => void; onCancel: () => void }) {
+export function RouteFormDialog({
+  onSaved,
+  onCancel,
+  homeRoutes = [],
+}: {
+  onSaved: (route: Route) => void;
+  onCancel: () => void;
+  homeRoutes?: Route[];
+}) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -152,7 +197,62 @@ export function RouteFormDialog({ onSaved, onCancel }: { onSaved: (route: Route)
       aria-label="Add a route"
       className="route-dialog m-auto w-[min(42rem,calc(100%-2rem))] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-lg bg-transparent p-0 text-ink"
     >
-      <RouteForm isFirst={false} onSaved={onSaved} onCancel={() => dialogRef.current?.close()} />
+      <RouteForm isFirst={false} homeRoutes={homeRoutes} onSaved={onSaved} onCancel={() => dialogRef.current?.close()} />
+    </dialog>
+  );
+}
+
+// Home holds 3 routes. Adding a fourth asks which one to take off; that route stays on Saved routes.
+export function HomeSwapDialog({
+  homeRoutes,
+  onPick,
+  onCancel,
+}: {
+  homeRoutes: Route[];
+  onPick: (route: Route) => void;
+  onCancel: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog && !dialog.open) dialog.showModal();
+  }, []);
+
+  return (
+    <dialog
+      ref={dialogRef}
+      onClose={onCancel}
+      onClick={(event) => {
+        if (event.target === dialogRef.current) dialogRef.current?.close();
+      }}
+      aria-labelledby="home-swap-title"
+      className="route-dialog m-auto w-[min(26rem,calc(100%-2rem))] rounded-lg border border-line bg-surface p-5 text-ink"
+    >
+      <div className="grid gap-4">
+        <div className="grid gap-1">
+          <h2 id="home-swap-title" className="text-lg font-bold">
+            Home already has 3 routes
+          </h2>
+          <p className="text-sm text-muted">Choose one to take off Home. It stays in your saved routes.</p>
+        </div>
+        <ul className="grid gap-2">
+          {homeRoutes.map((route) => (
+            <li key={route.id}>
+              <button
+                type="button"
+                onClick={() => onPick(route)}
+                className="w-full cursor-pointer rounded-md border border-line bg-bg px-4 py-2 text-left font-semibold hover:border-bike"
+              >
+                Take {route.name} off Home
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button type="button" onClick={() => dialogRef.current?.close()} className="cursor-pointer justify-self-start text-sm text-muted underline hover:text-ink">
+          Keep Home as it is
+        </button>
+      </div>
     </dialog>
   );
 }

@@ -23,6 +23,8 @@ export async function POST(request: Request) {
   const toPriority = (value: unknown) => (value === 'walk' || value === 'points' ? value : 'balanced');
   const forwardPriority = toPriority(body?.forwardPriority);
   const reversePriority = toPriority(body?.reversePriority);
+  const onDashboard = body?.onDashboard !== false;
+  const replaceRouteId = typeof body?.replaceRouteId === 'string' ? body.replaceRouteId : null;
 
   if (!name || name.length > MAX_NAME_LENGTH) return errorResponse(400, `Enter a name of up to ${MAX_NAME_LENGTH} characters.`, 'name');
   if (!start || start.length > MAX_ADDRESS_LENGTH) return errorResponse(400, 'Enter a start address.', 'start');
@@ -58,6 +60,12 @@ export async function POST(request: Request) {
   const { count, error: countError } = await supabase.from('routes').select('id', { count: 'exact', head: true });
   if (countError) return errorResponse(500, 'We couldn’t save your route. Try again.');
 
+  // Makes room on Home first. Row-level security means this can only touch the person's own route.
+  if (onDashboard && replaceRouteId) {
+    const { error: swapError } = await supabase.from('routes').update({ on_dashboard: false }).eq('id', replaceRouteId);
+    if (swapError) return errorResponse(500, 'We couldn’t make room on Home. Try again.');
+  }
+
   const { data, error } = await supabase
     .from('routes')
     .insert({
@@ -68,11 +76,13 @@ export async function POST(request: Request) {
       end_lat: endPoint.lat,
       end_lon: endPoint.lon,
       forward_priority: forwardPriority,
+      on_dashboard: onDashboard,
       reverse_priority: reversePriority,
     })
     .select()
     .single();
 
+  if (error?.code === 'P0001') return errorResponse(409, error.message, 'onDashboard');
   if (error?.code === '23505') return errorResponse(409, 'You already have a route with that name.', 'name');
   if (error) return errorResponse(500, 'We couldn’t save your route. Try again.');
 

@@ -84,7 +84,8 @@ function LiveDashboard() {
   // Null means use the route's saved priority for this direction.
   const [viewChoice, setViewChoice] = useState<Priority | null>(null);
 
-  const activeRoute = routes.find((route) => route.is_active) ?? null;
+  const homeRoutes = routes.filter((route) => route.on_dashboard);
+  const activeRoute = homeRoutes.find((route) => route.is_active) ?? null;
   const nearby = useNearbyStations(supabase, activeRoute);
   const freshness = freshnessOf(run, runLoaded, now);
 
@@ -112,7 +113,8 @@ function LiveDashboard() {
   const onSaved = async (route: Route) => {
     setAdding(false);
     setRoutes((previous) => [...previous, route]);
-    await activate(route.id);
+    // A route saved off Home stays on Saved routes, so only a Home route becomes the active one.
+    if (route.on_dashboard) await activate(route.id);
   };
 
   // The database works out the points, so what's saved can differ slightly if a bike just moved.
@@ -186,7 +188,7 @@ function LiveDashboard() {
       {routes.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <nav aria-label="Your routes" className="flex flex-wrap items-center gap-2">
-            {routes.map((route) => (
+            {homeRoutes.map((route) => (
               <button
                 key={route.id}
                 onClick={() => void activate(route.id)}
@@ -224,12 +226,14 @@ function LiveDashboard() {
 
       {showFirstRouteForm && <RouteForm isFirst onSaved={(route) => void onSaved(route)} onCancel={() => setAdding(false)} />}
       {adding && routes.length > 0 && (
-        <RouteFormDialog onSaved={(route) => void onSaved(route)} onCancel={() => setAdding(false)} />
+        <RouteFormDialog homeRoutes={homeRoutes} onSaved={(route) => void onSaved(route)} onCancel={() => setAdding(false)} />
       )}
 
       {routesLoaded && routes.length > 0 && !activeRoute && !adding && (
         <p className="rounded-lg border border-dashed border-line p-4 text-muted">
-          Choose a route above to see where to pick up and drop off.
+          {homeRoutes.length === 0
+            ? 'None of your routes are on Home. Turn one on in Saved routes.'
+            : 'Choose a route above to see where to pick up and drop off.'}
         </p>
       )}
 
