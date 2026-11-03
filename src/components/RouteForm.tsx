@@ -114,8 +114,8 @@ export function RouteForm({
         ))}
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <PriorityPicker legend="Start to end: what matters most?" value={forwardPriority} onChange={setForwardPriority} />
-        <PriorityPicker legend="End to start: what matters most?" value={reversePriority} onChange={setReversePriority} />
+        <PriorityPicker legend="Start to end" value={forwardPriority} onChange={setForwardPriority} />
+        <PriorityPicker legend="End to start" value={reversePriority} onChange={setReversePriority} />
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input
