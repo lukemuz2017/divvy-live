@@ -18,6 +18,7 @@ import {
   stationsInRange,
 } from '@/lib/scoring';
 import type { Priority, Recommendation } from '@/lib/scoring';
+import { BlockMap } from './BlockMap';
 import { FreshnessBadge, FreshnessBanner, timeAgo } from './FreshnessBadge';
 import { RouteForm, RouteFormDialog } from './RouteForm';
 import { SiteHeader } from './SiteHeader';
@@ -290,6 +291,33 @@ function LiveDashboard() {
                   </button>
                 ))}
               </div>
+
+              {from && to && (
+                <div className="grid max-w-3xl gap-4 md:grid-cols-2">
+                  <BlockMap
+                    title="Pick up near your start"
+                    center={from}
+                    kind="pickup"
+                    stations={nearby.stations}
+                    statuses={nearby.statuses}
+                    recommended={bestPickup}
+                    numbered={listView === 'walk' ? walkPickups : pointPickups}
+                  />
+                  <BlockMap
+                    title="Drop off near your destination"
+                    center={to}
+                    kind="dropoff"
+                    stations={nearby.stations}
+                    statuses={nearby.statuses}
+                    recommended={bestDropoff}
+                    numbered={listView === 'walk' ? walkDropoffs : pointDropoffs}
+                  />
+                  <p className="text-xs text-muted md:col-span-2">
+                    The square is you, the dashed circle is a half-mile walk, and darker dots earn more points. The pulsing ring is
+                    the recommended station, and numbers match the list below. Lines are blocks, not exact streets.
+                  </p>
+                </div>
+              )}
 
               <div className="grid gap-8">
                 {listView === 'walk' ? (

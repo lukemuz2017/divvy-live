@@ -121,3 +121,24 @@ body {
   background: rgb(0 0 0 / 0.45);
   backdrop-filter: blur(6px);
 }
+
+/* The walking line to the recommended station flows toward it. */
+@keyframes map-walk {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+.map-walk {
+  animation: map-walk 1s linear infinite;
+}
+
+.block-map circle {
+  transition: fill-opacity 0.7s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-walk {
+    animation: none;
+  }
+}
