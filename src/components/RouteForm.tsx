@@ -207,7 +207,7 @@ export function RouteFormDialog({
         if (event.target === dialogRef.current) dialogRef.current?.close();
       }}
       aria-label="Add a route"
-      className="route-dialog m-auto w-[min(42rem,calc(100%-2rem))] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-lg bg-transparent p-0 text-ink"
+      className="route-dialog m-auto w-[min(42rem,calc(100%-2rem))] rounded-lg bg-transparent p-0 text-ink max-md:max-h-[calc(100dvh-2rem)] max-md:overflow-y-auto md:overflow-visible"
     >
       <RouteForm isFirst={false} homeRoutes={homeRoutes} onSaved={onSaved} onCancel={() => dialogRef.current?.close()} />
     </dialog>

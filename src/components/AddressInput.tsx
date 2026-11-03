@@ -149,8 +149,8 @@ export function AddressInput({
         className={`w-full rounded-md border bg-bg px-3 py-2 ${invalid ? 'border-bad' : 'border-line'}`}
       />
       {open && (
-        // Sits in the page flow rather than floating, so the add-route pop-up's scrolling can't cut it off.
-        <div className="mt-1 overflow-hidden rounded-md border border-line bg-surface shadow-lg">
+        // Floats over the fields below instead of pushing them down.
+        <div className="absolute inset-x-0 top-full z-30 mt-1 overflow-hidden rounded-md border border-line bg-surface shadow-lg">
           <ul id={listId} role="listbox" aria-label="Address suggestions">
             {suggestions.map((suggestion, index) => (
               <li
