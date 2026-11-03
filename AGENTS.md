@@ -11,7 +11,8 @@ The data flow chart is in `docs/data-flow.html`. Read it before changing how dat
 - Database and Realtime: Supabase, project ref `lcfvojxisfzinywezofl`
 - Worker: Supabase Edge Function in `supabase/functions`, run by Supabase Cron every minute
 - Source: Divvy's public GBFS feeds, `station_status` and `station_information`, no key needed
-- Address lookup: U.S. Census geocoder, no key needed
+- Address lookup: U.S. Census geocoder, no key needed. Routes must start and end in the City of Chicago, checked from the city the Census returns.
+- Address suggestions while typing: Photon, a free OpenStreetMap search with no key. It is called from the browser, so partial addresses go to its server. Only Chicago results are shown.
 
 Edge Functions run on Deno, so `supabase` must stay in the `exclude` list in `tsconfig.json`.
 

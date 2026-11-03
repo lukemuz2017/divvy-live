@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Route } from '@/lib/live-data';
 import type { Priority } from '@/lib/scoring';
+import { AddressInput } from './AddressInput';
 
 const PRIORITIES: { value: Priority; label: string }[] = [
   { value: 'walk', label: 'Shortest walk' },
@@ -99,17 +100,28 @@ export function RouteForm({
             <label htmlFor={field.id} className="text-sm font-semibold">
               {field.label}
             </label>
-            <input
-              id={field.id}
-              value={values[field.id]}
-              onChange={(event) => setValues({ ...values, [field.id]: event.target.value })}
-              placeholder={field.placeholder}
-              maxLength={field.id === 'name' ? 40 : 200}
-              required
-              aria-invalid={error?.field === field.id}
-              aria-describedby={error?.field === field.id ? 'route-form-error' : undefined}
-              className={`rounded-md border bg-bg px-3 py-2 ${error?.field === field.id ? 'border-bad' : 'border-line'}`}
-            />
+            {field.id === 'name' ? (
+              <input
+                id={field.id}
+                value={values[field.id]}
+                onChange={(event) => setValues({ ...values, [field.id]: event.target.value })}
+                placeholder={field.placeholder}
+                maxLength={40}
+                required
+                aria-invalid={error?.field === field.id}
+                aria-describedby={error?.field === field.id ? 'route-form-error' : undefined}
+                className={`rounded-md border bg-bg px-3 py-2 ${error?.field === field.id ? 'border-bad' : 'border-line'}`}
+              />
+            ) : (
+              <AddressInput
+                id={field.id}
+                value={values[field.id]}
+                onChange={(value) => setValues((previous) => ({ ...previous, [field.id]: value }))}
+                placeholder={field.placeholder}
+                invalid={error?.field === field.id}
+                describedBy={error?.field === field.id ? 'route-form-error' : undefined}
+              />
+            )}
           </div>
         ))}
       </div>

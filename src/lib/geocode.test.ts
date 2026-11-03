@@ -1,7 +1,7 @@
 // Run with: npm test
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { GeocoderUnavailableError, parseGeocoderResponse, roundCoordinate, withDefaultCity } from './geocode.ts';
+import { GeocoderUnavailableError, isInChicago, parseGeocoderResponse, roundCoordinate, withDefaultCity } from './geocode.ts';
 
 test('adds Chicago when only a street is typed', () => {
   assert.equal(withDefaultCity(' 233 S Wacker Dr '), '233 S Wacker Dr, Chicago, IL');
@@ -14,7 +14,7 @@ test('leaves an address alone when it already has a city or ZIP code', () => {
 
 test('reads coordinates from a Census response, where x is longitude and y is latitude', () => {
   const response = { result: { addressMatches: [{ coordinates: { x: -87.636602278191, y: 41.878919545908 } }] } };
-  assert.deepEqual(parseGeocoderResponse(response), { lat: 41.878919545908, lon: -87.636602278191 });
+  assert.deepEqual(parseGeocoderResponse(response), { lat: 41.878919545908, lon: -87.636602278191, matchedAddress: undefined });
 });
 
 test('reports no match when Census finds nothing', () => {
@@ -28,4 +28,11 @@ test('treats an unexpected response as the lookup being unavailable, not a bad a
 test('rounds coordinates to about a block', () => {
   assert.equal(roundCoordinate(41.878919), 41.879);
   assert.equal(roundCoordinate(-87.636602), -87.637);
+});
+
+test('only Chicago addresses count as in Chicago', () => {
+  assert.equal(isInChicago('233 S WACKER DR, CHICAGO, IL, 60606'), true);
+  assert.equal(isInChicago('1 CHURCH ST, EVANSTON, IL, 60201'), false);
+  assert.equal(isInChicago('100 N CHICAGO AVE, OAK PARK, IL, 60302'), false, 'a street named Chicago is not the city');
+  assert.equal(isInChicago(undefined), false);
 });

@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { AddressNotFoundError, geocode, GeocoderUnavailableError } from '@/lib/geocode';
+import { AddressNotFoundError, geocode, GeocoderUnavailableError, OutsideChicagoError } from '@/lib/geocode';
 import type { Point } from '@/lib/scoring';
 
 const MAX_ADDRESS_LENGTH = 200;
@@ -38,6 +38,9 @@ export async function POST(request: Request) {
     } catch (error) {
       if (error instanceof AddressNotFoundError) {
         throw errorResponse(422, 'We couldn’t find that address. Use a street number and street name, like 233 S Wacker Dr.', field);
+      }
+      if (error instanceof OutsideChicagoError) {
+        throw errorResponse(422, 'That address is outside Chicago. Routes need to start and end within the city.', field);
       }
       if (error instanceof GeocoderUnavailableError) {
         throw errorResponse(503, 'The address lookup isn’t responding. Your saved routes still work. Try again in a few minutes.');
